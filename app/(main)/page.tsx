@@ -1,0 +1,260 @@
+"use client";
+
+import { useState } from "react";
+import ActivityCard from "@/components/ActivityCard";
+import { useRequireAuth } from "@/lib/hooks";
+import { useActivities } from "@/lib/queries";
+import { ACTIVITY_TYPE_BADGE, formatActivityTime } from "@/lib/constants";
+import Image from "next/image";
+import SpinLoader from "@/components/SpinLoader";
+
+const FILTERS = ["All Activities", "Nearby", "Today", "Playdates"] as const;
+type Filter = (typeof FILTERS)[number];
+
+export default function HomePage() {
+  const [activeFilter, setActiveFilter] = useState<Filter>("All Activities");
+  const [search, setSearch] = useState("");
+
+  const { user, isLoading } = useRequireAuth();
+  const { data: activities, isFetching: isActivitiesFetching } =
+    useActivities();
+
+  if (isLoading || isActivitiesFetching)
+    return <SpinLoader title="Loading home" />;
+
+  return (
+    <div className="flex min-h-dvh bg-[#f7f7f6] w-full">
+      {/* ── Main column ── */}
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Mobile sticky header */}
+        <header className="md:hidden sticky top-0 z-10 bg-[#f7f7f6]/80 backdrop-blur-md px-4 pt-4 pb-2">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#e2cfb7] flex items-center justify-center overflow-hidden">
+                <Image
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsSKRt5tFy-1BdBd4c_QRh6ksE4CZDV0XfAuYzvyfEvfZwKt3ipjDz_96uK0F5JXnwzbli6DZCBn6ubCqtlyarVRtAsSfyBQzrkJUbDCzA4_R9rPAvq-HzHdpzQ8Xo2bCsR9JqsMxTHHikPqmmcpqxdxUE-Nw7uwmiYS6XZqyr-5vD5r0LSH6PAGrpNZ8-gaUl6lFCbIk3WFnSlQLaBTr3GJ9HSwidqH48VPhHSUt1HCGPB8sSyZYMYUkPufAwmJgT0Tjr5_5eudTZ"
+                  width={1098}
+                  height={1098}
+                  alt="Dog profile"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div>
+                <h1 className="text-[17px] font-bold leading-tight text-[#1e293b]">
+                  PawFriends
+                </h1>
+                <div className="flex items-center text-xs text-[#64748b]">
+                  <span
+                    className="material-symbols-outlined mr-1"
+                    style={{ fontSize: 14 }}
+                  >
+                    location_on
+                  </span>
+                  <span>Central Park, NY</span>
+                </div>
+              </div>
+            </div>
+            <button className="w-10 h-10 rounded-full flex items-center justify-center bg-[rgba(226,207,183,0.2)] hover:bg-[rgba(226,207,183,0.4)] transition-colors">
+              <span className="material-symbols-outlined text-[#1e293b]">
+                notifications
+              </span>
+            </button>
+          </div>
+          <SearchAndFilters
+            search={search}
+            setSearch={setSearch}
+            activeFilter={activeFilter}
+            setActiveFilter={setActiveFilter}
+          />
+        </header>
+
+        {/* Desktop top bar */}
+        <header className="hidden md:flex items-center gap-4 px-6 py-4 border-b border-[#ede8e0] bg-[#f7f7f6]/80 backdrop-blur-md sticky top-0 z-10">
+          <div className="flex-1">
+            <SearchAndFilters
+              search={search}
+              setSearch={setSearch}
+              activeFilter={activeFilter}
+              setActiveFilter={setActiveFilter}
+            />
+          </div>
+          <div className="flex gap-3 shrink-0 h-full items-center md:items-baseline">
+            <div className="flex items-center text-sm text-[#64748b]">
+              <span
+                className="material-symbols-outlined mr-1"
+                style={{ fontSize: 16 }}
+              >
+                location_on
+              </span>
+              <span>{user?.locationName}</span>
+            </div>
+            <button className="w-10 h-10 rounded-full flex items-center justify-center bg-[rgba(226,207,183,0.2)] hover:bg-[rgba(226,207,183,0.4)] transition-colors">
+              <span className="material-symbols-outlined text-[#1e293b]">
+                notifications
+              </span>
+            </button>
+          </div>
+        </header>
+
+        {/* Feed */}
+        <main className="flex-1 px-4 md:px-6 py-4 pb-24 md:pb-8">
+          {/* Compatibility CTA */}
+          <button
+            className="w-full flex items-center justify-between bg-[#e2cfb7] hover:opacity-90 text-[#1e293b] p-4 rounded-xl shadow-sm transition-opacity mb-6"
+            onClick={() => {
+              window.location.href = "/compatibility";
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-2xl">
+                shield_with_heart
+              </span>
+              <span className="font-bold text-[15px]">
+                View Compatibility Results
+              </span>
+            </div>
+            <span className="material-symbols-outlined">chevron_right</span>
+          </button>
+
+          <h2 className="text-xl font-bold tracking-tight text-[#1e293b] mb-4">
+            Upcoming Activities
+          </h2>
+
+          {/* Empty state */}
+          {(!activities || activities.length === 0) && (
+            <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+              <div className="w-20 h-20 rounded-full bg-[rgba(226,207,183,0.2)] flex items-center justify-center">
+                <span
+                  className="material-symbols-outlined text-[#e2cfb7]"
+                  style={{ fontSize: 40 }}
+                >
+                  pets
+                </span>
+              </div>
+              <div>
+                <p className="text-[17px] font-bold text-[#1e293b]">
+                  No activities yet
+                </p>
+                <p className="text-[13px] text-[#64748b] mt-1">
+                  Be the first to create an activity for the pack!
+                </p>
+              </div>
+              <a
+                href="/create-activity"
+                className="mt-2 bg-[#1e293b] text-white font-bold text-[14px] px-6 py-3 rounded-xl flex items-center gap-2 hover:opacity-90 transition-opacity"
+              >
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: 18 }}
+                >
+                  add
+                </span>
+                Create Activity
+              </a>
+            </div>
+          )}
+
+          {/* Mobile: stacked / Desktop: 2-col grid */}
+          {activities && activities.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {activities.map((activity) => {
+                const badge = ACTIVITY_TYPE_BADGE[activity.type] ?? {
+                  icon: "pets",
+                  label: activity.type,
+                };
+                return (
+                  <ActivityCard
+                    key={activity._id}
+                    id={activity._id}
+                    image={activity.image ?? ""}
+                    imageAlt={activity.title}
+                    badgeIcon={badge.icon}
+                    badgeLabel={badge.label}
+                    title={activity.title}
+                    avatars={[]}
+                    extraCount={activity.maxDogs}
+                    location={activity.locationName}
+                    time={formatActivityTime(
+                      activity.startDate,
+                      activity.endDate,
+                    )}
+                    hostAvatar=""
+                    hostAlt=""
+                    hostName=""
+                    isOwner={user?._id === activity.ownerId}
+                    isExpired={
+                      !activity.endDate || activity.endDate >= new Date()
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function SearchAndFilters({
+  search,
+  setSearch,
+  activeFilter,
+  setActiveFilter,
+}: {
+  search: string;
+  setSearch: (v: string) => void;
+  activeFilter: Filter;
+  setActiveFilter: (f: Filter) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <label className="relative flex items-center w-full">
+        <span
+          className="material-symbols-outlined absolute left-4 text-[#94a3b8]"
+          style={{ fontSize: 20 }}
+        >
+          search
+        </span>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search activities, breeds, or parks..."
+          className="w-full h-12 pl-11 pr-4 bg-white border-none rounded-xl text-sm text-[#1e293b] placeholder-[#94a3b8] outline-none focus:ring-2 focus:ring-[#e2cfb7]"
+        />
+      </label>
+      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+        {FILTERS.map((f) => (
+          <button
+            key={f}
+            onClick={() => setActiveFilter(f)}
+            className={`flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-colors ${
+              activeFilter === f
+                ? "bg-[#e2cfb7] text-[#1e293b]"
+                : "bg-white text-[#475569] border border-[#f1f5f9]"
+            }`}
+          >
+            {f === "Nearby" && (
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: 16 }}
+              >
+                near_me
+              </span>
+            )}
+            {f === "Today" && (
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: 16 }}
+              >
+                calendar_today
+              </span>
+            )}
+            {f}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
