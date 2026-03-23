@@ -164,14 +164,16 @@ export const keys = {
 
 export type CompatibilityResult = { score: number; reason: string };
 
-export function useCompatibility(params: {
-  breed?: string;
-  size?: string;
-  vaccine?: boolean;
-  fleaTick?: boolean;
-  activityType?: string;
-  activitySizes?: string[];
-} | null) {
+export function useCompatibility(
+  params: {
+    breed?: string;
+    size?: string;
+    vaccine?: boolean;
+    fleaTick?: boolean;
+    activityType?: string;
+    activitySizes?: string[];
+  } | null,
+) {
   return useQuery({
     queryKey: ["compatibility", params],
     queryFn: () =>
@@ -297,6 +299,20 @@ export function useCreateAttendees() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendees"] });
+      queryClient.invalidateQueries({ queryKey: keys.activities });
+    },
+  });
+}
+
+export function useUpdateAttendee() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { _id: string; status: "joined" | "rejected" }) =>
+      apiFetch(`/api/attendees`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: keys.activities });
     },
   });
@@ -639,10 +655,11 @@ export enum PetEnergyLevel {
 export type PetSizeCategory = "XS" | "SM" | "MD" | "LG" | "XL";
 
 export type Attendee = {
+  _id: string;
   image: string;
   name: string;
   role: "pet" | "owner";
-  status: "pending" | "joined";
+  status: "pending" | "joined" | "rejected";
   requestMessage?: string;
 };
 
@@ -650,7 +667,7 @@ export type AttendeeReq = {
   _id: string;
   attendeeId: string;
   activityId: string;
-  status?: "pending" | "joined";
+  status?: "pending" | "joined" | "rejected";
   requestMessage?: string;
   role: "pet" | "user";
 };

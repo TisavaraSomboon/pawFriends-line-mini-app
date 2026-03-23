@@ -21,8 +21,7 @@ jest.mock('next/server', () => ({
 const VALID_ID = '507f1f77bcf86cd799439011';
 
 function makeContext(id: string) {
-  // The route awaits params, but awaiting a plain object just returns it
-  return { params: { id } } as { params: { id: string } };
+  return { params: Promise.resolve({ id }) };
 }
 
 const sampleActivity = {
@@ -39,14 +38,18 @@ describe('GET /api/activities/[id]', () => {
   });
 
   it('returns 404 when the activity does not exist', async () => {
-    mockActivitiesCol.mockResolvedValue({ findOne: jest.fn().mockResolvedValue(null) });
+    mockActivitiesCol.mockResolvedValue({
+      aggregate: jest.fn().mockReturnValue({ toArray: jest.fn().mockResolvedValue([]) }),
+    });
     const res = await GET({} as Request, makeContext(VALID_ID)) as unknown as { _body: { error: string }; status: number };
     expect(res.status).toBe(404);
     expect(res._body.error).toBe('Not found');
   });
 
   it('returns the activity when found', async () => {
-    mockActivitiesCol.mockResolvedValue({ findOne: jest.fn().mockResolvedValue(sampleActivity) });
+    mockActivitiesCol.mockResolvedValue({
+      aggregate: jest.fn().mockReturnValue({ toArray: jest.fn().mockResolvedValue([sampleActivity]) }),
+    });
     const res = await GET({} as Request, makeContext(VALID_ID)) as unknown as { _body: typeof sampleActivity; status: number };
     expect(res.status).toBe(200);
     expect(res._body).toEqual(sampleActivity);

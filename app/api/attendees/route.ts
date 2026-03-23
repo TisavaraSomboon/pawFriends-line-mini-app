@@ -49,3 +49,20 @@ export async function POST(req: Request) {
 
   return response;
 }
+
+export async function PATCH(req: Request) {
+  const body = await req.json();
+  const auth = await getAuthUser();
+
+  if (!auth)
+    return NextResponse.json({ error: "Can not found user" }, { status: 401 });
+
+  const col = await attendeesCol();
+
+  await col.updateOne(
+    { _id: new ObjectId(body._id) },
+    { $set: { status: body.status, updatedAt: new Date() } },
+  );
+
+  return NextResponse.json({ success: true });
+}

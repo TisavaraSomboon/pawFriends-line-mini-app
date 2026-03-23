@@ -94,7 +94,7 @@ export async function GET(req: Request) {
             },
             {
               $project: {
-                _id: 0,
+                _id: 1,
                 name: "$profile.name",
                 image: "$profile.image",
                 role: "$role",

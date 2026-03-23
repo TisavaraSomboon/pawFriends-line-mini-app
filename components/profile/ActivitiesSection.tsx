@@ -1,7 +1,7 @@
 "use client";
 
 import { ACTIVITY_TYPE_BADGE } from "@/lib/constants";
-import { Activity } from "@/lib/queries";
+import { Activity, useUpdateAttendee } from "@/lib/queries";
 import dayjs from "dayjs";
 import calendar from "dayjs/plugin/calendar";
 import { useRouter } from "next/navigation";
@@ -14,6 +14,7 @@ dayjs.extend(calendar);
 
 export default function ActivitiesSection({ activity }: ActivityProps) {
   const router = useRouter();
+  const { mutate: updateAttendee } = useUpdateAttendee();
   if (!activity) return;
   return (
     <div>
@@ -107,10 +108,10 @@ export default function ActivitiesSection({ activity }: ActivityProps) {
                         Member join ({attendees.length})
                       </div>
                       <div className="px-4 pb-4 flex flex-col gap-3">
-                        {attendees.map(({ role, name, status }) => {
-                          if (status === "joined") return;
+                        {attendees.map(({ _id, role, name, status, requestMessage }) => {
+                          if (status === "joined") return null;
                           return (
-                            <div key={name} className="flex items-center gap-3">
+                            <div key={_id} className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-[rgba(226,207,183,0.4)] flex items-center justify-center text-sm shrink-0">
                                 {role === "pet" ? "🐶" : "👩🏻‍🦲"}
                               </div>
@@ -118,12 +119,17 @@ export default function ActivitiesSection({ activity }: ActivityProps) {
                                 <p className="text-xs font-bold text-[#1e293b] truncate">
                                   {name}
                                 </p>
-                                {/* <p className="text-[10px] text-[#64748b] truncate">
-                                &quot;{req.msg}&quot;
-                              </p> */}
+                                {requestMessage && (
+                                  <p className="text-[10px] text-[#64748b] truncate">
+                                    &quot;{requestMessage}&quot;
+                                  </p>
+                                )}
                               </div>
                               <div className="flex gap-1">
-                                <button className="w-7 h-7 rounded-lg bg-[#e2cfb7] flex items-center justify-center hover:opacity-80 transition-opacity">
+                                <button
+                                  onClick={() => updateAttendee({ _id, status: "joined" })}
+                                  className="w-7 h-7 rounded-lg bg-[#e2cfb7] flex items-center justify-center hover:opacity-80 transition-opacity"
+                                >
                                   <span
                                     className="material-symbols-outlined text-[#1e293b]"
                                     style={{ fontSize: 14 }}
@@ -131,7 +137,10 @@ export default function ActivitiesSection({ activity }: ActivityProps) {
                                     check
                                   </span>
                                 </button>
-                                <button className="w-7 h-7 rounded-lg bg-[#f1f5f9] flex items-center justify-center hover:bg-red-50 transition-colors">
+                                <button
+                                  onClick={() => updateAttendee({ _id, status: "rejected" })}
+                                  className="w-7 h-7 rounded-lg bg-[#f1f5f9] flex items-center justify-center hover:bg-red-50 transition-colors"
+                                >
                                   <span
                                     className="material-symbols-outlined text-[#94a3b8]"
                                     style={{ fontSize: 14 }}

@@ -3,10 +3,13 @@ import { ObjectId } from "mongodb";
 import { activitiesCol } from "@/lib/db";
 
 // GET /api/activities/:id
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  _: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id: activityId } = await params;
   const col = await activitiesCol();
-  // const activity = await col.findOne({ _id: new ObjectId(activityId) });
+
   const activity = await col
     .aggregate([
       {
@@ -100,7 +103,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     ])
     .toArray();
 
-  if (!activity)
+  if (!activity[0])
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(activity[0]);
 }
@@ -108,7 +111,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 // PATCH /api/activities/:id
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: userId } = await params;
   const body = await req.json();
