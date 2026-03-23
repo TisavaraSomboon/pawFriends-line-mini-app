@@ -62,20 +62,19 @@ function FieldError({ message }: { message?: string }) {
 /* ── Page ── */
 export default function EditProfilePage() {
   const router = useRouter();
-  const params = useParams();
   const { toast } = useToast();
 
   const { data: user } = useAuthUser();
   const userId = user?._id;
-  const id = params.id === "owner" ? userId : (params.id as string);
 
-  const { data: profileInfo, isPending: isUserLoading } = useProfile(id);
+  const { data: profileInfo, isPending: isUserLoading } = useProfile(userId);
 
   const userInfo = profileInfo?.user;
 
-  const { mutate: updateProfile, isPending: isSaving } = useUpdateProfile(id);
+  const { mutate: updateProfile, isPending: isSaving } =
+    useUpdateProfile(userId);
   const { mutate: incrementAiCount } = useIncrementAiPhotoCount(
-    id,
+    userId,
     "aiProfilePhotoCount",
   );
   const { mutateAsync: checkName } = useCheckName();
@@ -178,22 +177,11 @@ export default function EditProfilePage() {
         </h1>
       </header>
 
-      {/* ── Progress dots ── */}
-      <div className="flex items-center justify-center gap-2 py-4">
-        {[0, 1].map((i) => (
-          <div
-            key={i}
-            className="w-2 h-2 rounded-full bg-[rgba(226,207,183,0.4)]"
-          />
-        ))}
-        <div className="w-8 h-2 rounded-full bg-[#e2cfb7]" />
-      </div>
-
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="flex-1 overflow-y-auto pb-32"
       >
-        <div className="max-w-lg mx-auto px-4 flex flex-col gap-6">
+        <div className="max-w-lg mx-auto px-4 flex flex-col gap-6 mt-10">
           {/* ── Photo section ── */}
           <CoverPhotoPicker
             label="Profile Photo"

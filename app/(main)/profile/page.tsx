@@ -54,11 +54,34 @@ export default function ProfilePage() {
 
   if (!allProfiles)
     return (
-      <NotFoundPage
-        title="Profile not found"
-        description="We couldn't find your profile. It may have been removed or
+      <div className="flex flex-col w-full">
+        <header className="sticky top-0 z-10 bg-[#f7f7f6]/80 backdrop-blur-md flex items-center justify-between px-4 md:px-8 py-4 border-b border-[rgba(226,207,183,0.2)]">
+          <h1 className="text-[18px] md:text-xl font-bold tracking-tight text-[#1e293b]">
+            My Pack Profile
+          </h1>
+          <div className="relative">
+            <button
+              ref={settingsBtnRef}
+              onClick={() => setSettingsOpen((v) => !v)}
+              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-[rgba(226,207,183,0.2)] transition-colors"
+            >
+              <span className="material-symbols-outlined text-[#1e293b]">
+                settings
+              </span>
+            </button>
+            <SettingsMenu
+              open={settingsOpen}
+              onClose={() => setSettingsOpen(false)}
+              anchorRef={settingsBtnRef}
+            />
+          </div>
+        </header>
+        <NotFoundPage
+          title="Profile not found"
+          description="We couldn't find your profile. It may have been removed or
           hasn't been set up yet."
-      />
+        />
+      </div>
     );
 
   const members = [allProfiles.user, ...(allProfiles.pets ?? [])];
