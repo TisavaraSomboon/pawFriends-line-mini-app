@@ -52,8 +52,6 @@ export default function ActivityCard({
 }: ActivityCardProps) {
   const router = useRouter();
 
-  console.log("attendees => ", attendees);
-
   return (
     <div className="relative">
       {isExpired && (

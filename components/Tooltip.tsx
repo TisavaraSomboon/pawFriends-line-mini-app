@@ -1,5 +1,6 @@
 "use client";
 
+import clsx from "clsx";
 import { ReactNode } from "react";
 
 type Props = {
@@ -7,6 +8,7 @@ type Props = {
   children: ReactNode;
   isDisable?: boolean;
   position?: "top" | "bottom";
+  className?: string;
 };
 
 export default function Tooltip({
@@ -14,9 +16,12 @@ export default function Tooltip({
   isDisable = false,
   children,
   position = "top",
+  className,
 }: Props) {
   return (
-    <div className="relative group/tooltip inline-flex w-fit">
+    <div
+      className={clsx("relative group/tooltip inline-flex w-fit", className)}
+    >
       {children}
       {!isDisable && (
         <span

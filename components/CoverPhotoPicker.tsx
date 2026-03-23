@@ -137,7 +137,10 @@ export default function CoverPhotoPicker({
         </div>
       ) : (
         /* Primary generate CTA — shown before first generate */
-        <Tooltip label="Your limit will refresh in the next day.">
+        <Tooltip
+          className="w-full"
+          label="Your limit will refresh in the next day."
+        >
           <button
             type="button"
             onClick={onGenerate}

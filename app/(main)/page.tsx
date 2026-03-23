@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import ActivityCard from "@/components/ActivityCard";
-import { useActivities, useCreateAttendees, useProfile } from "@/lib/queries";
+import { PetSizeCategory, useActivities, useCreateAttendees, useProfile } from "@/lib/queries";
 import { ACTIVITY_TYPE_BADGE, formatActivityTime } from "@/lib/constants";
 import Image from "next/image";
 import SpinLoader from "@/components/SpinLoader";
@@ -14,7 +14,7 @@ type Filter = (typeof FILTERS)[number];
 export default function HomePage() {
   const [activeFilter, setActiveFilter] = useState<Filter>("All Activities");
   const [search, setSearch] = useState("");
-  const [openRequestModal, setOpenRequestModal] = useState(false);
+  const [joinActivityId, setJoinActivityId] = useState<string | null>(null);
 
   const { data: allProfiles, isPending: isUserPending } = useProfile();
   const { data: activities, isFetching: isActivitiesFetching } =
@@ -101,7 +101,7 @@ export default function HomePage() {
         {/* Feed */}
         <main className="flex-1 px-4 md:px-6 py-4 pb-24 md:pb-8">
           {/* Compatibility CTA */}
-          <button
+          {/* <button
             className="w-full flex items-center justify-between bg-[#e2cfb7] hover:opacity-90 text-[#1e293b] p-4 rounded-xl shadow-sm transition-opacity mb-6"
             onClick={() => {
               window.location.href = "/compatibility";
@@ -116,7 +116,7 @@ export default function HomePage() {
               </span>
             </div>
             <span className="material-symbols-outlined">chevron_right</span>
-          </button>
+          </button> */}
 
           <h2 className="text-xl font-bold tracking-tight text-[#1e293b] mb-4">
             Upcoming Activities
@@ -158,35 +158,42 @@ export default function HomePage() {
 
           {/* Mobile: stacked / Desktop: 2-col grid */}
           {activities && activities.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {activities.map((activity) => {
-                const badge = ACTIVITY_TYPE_BADGE[activity.type] ?? {
-                  icon: "pets",
-                  label: activity.type,
-                };
-                return (
-                  <div key={activity._id}>
-                    <RequestModal
-                      open={openRequestModal}
-                      pets={allProfiles?.pets ?? []}
-                      onConfirm={(selectedId) => {
-                        createAttendee(
-                          {
-                            activityId: activity._id,
-                            attendeeId: selectedId,
-                            role: "pet",
-                          },
-                          {
-                            onSuccess: () => {
-                              setOpenRequestModal(false);
-                            },
-                          },
-                        );
-                      }}
-                      onCancel={() => {
-                        setOpenRequestModal(false);
-                      }}
-                    />
+            <>
+              <RequestModal
+                open={!!joinActivityId}
+                pets={allProfiles?.pets ?? []}
+                activityType={activities.find((a) => a._id === joinActivityId)?.type}
+                activitySizes={activities.find((a) => a._id === joinActivityId)?.sizes}
+                onConfirm={(selectedId, message) => {
+                  if (!joinActivityId) return;
+                  const activity = activities.find((a) => a._id === joinActivityId);
+                  const pet = allProfiles?.pets.find((p) => p._id === selectedId);
+                  const sizeMatch =
+                    !activity?.sizes?.length ||
+                    !pet?.size ||
+                    activity.sizes.includes(pet.size as PetSizeCategory);
+                  createAttendee(
+                    {
+                      activityId: joinActivityId,
+                      attendeeId: selectedId,
+                      role: "pet",
+                      status: sizeMatch ? "joined" : "pending",
+                      requestMessage:
+                        message ?? (sizeMatch ? undefined : "The dogs size not match with the request"),
+                    },
+                    { onSuccess: () => setJoinActivityId(null) },
+                  );
+                }}
+                onCancel={() => setJoinActivityId(null)}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {activities.map((activity) => {
+                  const badge = ACTIVITY_TYPE_BADGE[activity.type] ?? {
+                    icon: "pets",
+                    label: activity.type,
+                  };
+
+                  return (
                     <ActivityCard
                       key={activity._id}
                       id={activity._id}
@@ -222,13 +229,13 @@ export default function HomePage() {
                       }
                       onJoin={() => {
                         if (allProfiles && allProfiles.pets.length > 0)
-                          setOpenRequestModal(true);
+                          setJoinActivityId(activity._id);
                       }}
                     />
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </main>
       </div>

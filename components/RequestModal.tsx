@@ -4,14 +4,29 @@ import { useState } from "react";
 import Image from "next/image";
 import clsx from "clsx";
 import type { Pet } from "@/lib/queries";
+import { useCompatibility } from "@/lib/queries";
 
 type Props = {
   open: boolean;
   pets: Pet[];
   activityTitle?: string;
+  activityType?: string;
+  activitySizes?: string[];
   onCancel: () => void;
-  onConfirm: (selectedId: string) => void;
+  onConfirm: (selectedId: string, message?: string) => void;
 };
+
+function getCompatibility(pet: Pet): number {
+  const factors = [!!pet.breed, !!pet.vaccine, !!pet.fleaTick];
+  const score = factors.filter(Boolean).length;
+  return Math.round(5 + (score / factors.length) * 93);
+}
+
+function getCompatibilityColor(pct: number): string {
+  if (pct >= 80) return "#4ade80"; // green
+  if (pct >= 50) return "#e1cfb7"; // warm/neutral
+  return "#f97316"; // orange warning
+}
 
 function getHealthBadge(pet: Pet): {
   label: string;
@@ -47,12 +62,29 @@ export default function RequestModal({
   open,
   pets,
   activityTitle,
+  activityType,
+  activitySizes,
   onCancel,
   onConfirm,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string>(pets[0]?._id ?? "");
+  const [message, setMessage] = useState("");
 
   const selectedPet = pets.find((p) => p._id === selectedId);
+
+  const { data: compatibility, isFetching: isCompatibilityLoading } =
+    useCompatibility(
+      open && selectedPet && activityType
+        ? {
+            breed: selectedPet.breed,
+            size: selectedPet.size,
+            vaccine: selectedPet.vaccine,
+            fleaTick: selectedPet.fleaTick,
+            activityType,
+            activitySizes,
+          }
+        : null,
+    );
 
   if (!open) return null;
 
@@ -181,43 +213,108 @@ export default function RequestModal({
           </div>
 
           {/* ── Compatibility panel ── */}
-          {selectedPet && (
-            <div className="mx-4 mt-6 mb-6 p-6 rounded-2xl bg-white shadow-sm border border-[#e1cfb7]/10">
-              <div className="flex items-center gap-4">
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#e1cfb7]/20">
-                  <span className="material-symbols-outlined text-2xl text-[#c4a87a] animate-pulse">
-                    psychology
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <p className="text-[#1e293b] text-sm font-bold">Processing</p>
-                  <p className="text-[#64748b] text-xs">
-                    Analyzing {selectedPet.name ?? "your dog"}&apos;s profile
-                    with activity requirements...
-                  </p>
-                </div>
-              </div>
+          {selectedPet &&
+            activityType &&
+            (() => {
+              const pct = compatibility?.score ?? getCompatibility(selectedPet);
+              const color = getCompatibilityColor(pct);
+              return (
+                <div className="mx-4 mt-6 mb-6 p-6 rounded-2xl bg-white shadow-sm border border-[#e1cfb7]/10">
+                  <div className="flex items-center gap-4">
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#e1cfb7]/20">
+                      <span
+                        className={clsx(
+                          "material-symbols-outlined text-2xl text-[#c4a87a]",
+                          isCompatibilityLoading && "animate-pulse",
+                        )}
+                      >
+                        psychology
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <p className="text-[#1e293b] text-sm font-bold">
+                        AI Compatibility
+                      </p>
+                      <p className="text-[#64748b] text-xs">
+                        {isCompatibilityLoading
+                          ? `Analyzing ${selectedPet.name ?? "your dog"} with activity…`
+                          : (compatibility?.reason ??
+                            "Breed · Vaccine · Flea & Tick")}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="mt-4 flex flex-col gap-2">
-                <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-[#94a3b8]">
-                  <span>Compatibility</span>
-                  <span>98%</span>
+                  <div className="mt-4 flex flex-col gap-2">
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-[#94a3b8]">
+                      <span>Compatibility</span>
+                      <span style={{ color }}>
+                        {isCompatibilityLoading ? "…" : `${pct}%`}
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: isCompatibilityLoading ? "0%" : `${pct}%`,
+                          backgroundColor: color,
+                        }}
+                      />
+                    </div>
+                    <div className="flex gap-3 mt-1">
+                      {[
+                        { label: "Breed", ok: !!selectedPet.breed },
+                        { label: "Vaccine", ok: !!selectedPet.vaccine },
+                        { label: "Flea & Tick", ok: !!selectedPet.fleaTick },
+                      ].map(({ label, ok }) => (
+                        <div
+                          key={label}
+                          className="flex items-center gap-1 text-[10px] font-semibold"
+                        >
+                          <span
+                            className="material-symbols-outlined"
+                            style={{
+                              fontSize: 12,
+                              color: ok ? "#4ade80" : "#f97316",
+                            }}
+                          >
+                            {ok ? "check_circle" : "cancel"}
+                          </span>
+                          <span
+                            className={ok ? "text-[#475569]" : "text-[#f97316]"}
+                          >
+                            {label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Message suggestion when score < 90 */}
+                    {!isCompatibilityLoading && pct < 90 && (
+                      <div className="mt-4 flex flex-col gap-2">
+                        <p className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-wider">
+                          Message to host
+                        </p>
+                        <textarea
+                          rows={3}
+                          value={message}
+                          onChange={(e) => setMessage(e.target.value)}
+                          placeholder="Tell the host why your dog would be a great fit…"
+                          className="w-full rounded-xl border border-[#e1cfb7]/40 bg-[#f7f7f6] px-3 py-2 text-[13px] text-[#1e293b] placeholder-[#94a3b8] outline-none focus:border-[#e1cfb7] focus:ring-1 focus:ring-[#e1cfb7] resize-none"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="h-1.5 w-full bg-slate-100 rounded-full">
-                  <div
-                    className="h-full bg-[#e1cfb7] rounded-full"
-                    style={{ width: "98%" }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+              );
+            })()}
         </div>
 
         {/* ── Footer ── */}
         <footer className="shrink-0 p-4 bg-[#f7f7f6]/80 backdrop-blur-md border-t border-[#e1cfb7]/20">
           <button
-            onClick={() => selectedId && onConfirm(selectedId)}
+            onClick={() =>
+              selectedId && onConfirm(selectedId, message || undefined)
+            }
             disabled={!selectedId}
             className="w-full bg-[#e1cfb7] text-[#1e293b] font-bold py-4 rounded-xl shadow-lg shadow-[#e1cfb7]/20 hover:scale-[0.98] active:scale-[0.95] transition-all disabled:opacity-50 disabled:pointer-events-none"
           >

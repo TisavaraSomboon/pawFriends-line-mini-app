@@ -160,6 +160,30 @@ export const keys = {
   profile: (userId: string) => ["profile", userId] as const,
 };
 
+// ─── Compatibility ─────────────────────────────────────────────────────────────
+
+export type CompatibilityResult = { score: number; reason: string };
+
+export function useCompatibility(params: {
+  breed?: string;
+  size?: string;
+  vaccine?: boolean;
+  fleaTick?: boolean;
+  activityType?: string;
+  activitySizes?: string[];
+} | null) {
+  return useQuery({
+    queryKey: ["compatibility", params],
+    queryFn: () =>
+      apiFetch<CompatibilityResult>("/api/compatibility", {
+        method: "POST",
+        body: JSON.stringify(params),
+      }),
+    enabled: !!params?.activityType,
+    staleTime: Infinity,
+  });
+}
+
 // ─── Places ────────────────────────────────────────────────────────────────────
 
 export type PlacePrediction = {
@@ -273,6 +297,7 @@ export function useCreateAttendees() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendees"] });
+      queryClient.invalidateQueries({ queryKey: keys.activities });
     },
   });
 }
@@ -386,6 +411,7 @@ export function useUpdatePetProfile(petId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["petProfile", petId] });
+      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
     },
   });
 }

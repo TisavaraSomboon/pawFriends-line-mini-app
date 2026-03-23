@@ -93,17 +93,16 @@ export default function ProfilePage() {
     router.replace(`?${params.toString()}`);
   };
 
-  const handleMarkSterilized = () => {
-    updatePet(
-      {
-        sterilizing: true,
+  const handleMarkHealth = (body: {
+    sterilizing?: boolean;
+    vaccine?: boolean;
+    fleaTick?: boolean;
+  }) => {
+    updatePet(body, {
+      onSuccess: () => {
+        toast(`${member.name} is now marked as sterilized.`, "success");
       },
-      {
-        onSuccess: () => {
-          toast(`${member.name} is now marked as sterilized.`, "success");
-        },
-      },
-    );
+    });
   };
 
   return (
@@ -163,7 +162,7 @@ export default function ProfilePage() {
               goodWith={member.goodWith}
               considerNote={member.considerNotes}
               sterilizing={member.sterilizing}
-              onMarkSterilized={handleMarkSterilized}
+              onMarkHealth={handleMarkHealth}
             />
           ) : (
             <ActivitiesSection activity={userActivities} />
@@ -246,7 +245,7 @@ export default function ProfilePage() {
                 goodWith={member.goodWith}
                 considerNote={member.considerNotes}
                 sterilizing={member.sterilizing}
-                onMarkSterilized={handleMarkSterilized}
+                onMarkHealth={handleMarkHealth}
               />
             ) : (
               <ActivitiesSection activity={userActivities} />
