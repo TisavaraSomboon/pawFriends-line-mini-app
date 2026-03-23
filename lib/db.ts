@@ -1,5 +1,5 @@
-import clientPromise from "./mongodb";
 import { Db, Collection, ObjectId } from "mongodb";
+import { getDb as getMongoDb } from "@/lib/mongodb";
 
 export type UserDoc = {
   _id?: ObjectId;
@@ -62,8 +62,7 @@ export type AttendeesDoc = {
 };
 
 async function getDb(): Promise<Db> {
-  const client = await clientPromise;
-  return client.db(process.env.MONGODB_DB);
+  return getMongoDb();
 }
 
 export async function usersCol(): Promise<Collection<UserDoc>> {

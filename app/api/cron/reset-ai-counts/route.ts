@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import clientPromise from "@/lib/mongodb";
+import { getDb } from "@/lib/mongodb";
 
 // GET /api/cron/reset-ai-counts
 // Resets aiProfilePhotoCount and aiCoverImageCount to 0 for all users.
@@ -10,9 +10,7 @@ export async function GET(req: NextRequest) {
   if (secret !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB);
+  const db = await getDb();
 
   const result = await db.collection("users").updateMany(
     {},

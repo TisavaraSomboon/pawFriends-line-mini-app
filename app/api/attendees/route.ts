@@ -1,6 +1,6 @@
 import { getAuthUser } from "@/lib/auth";
 import { attendeesCol } from "@/lib/db";
-import clientPromise from "@/lib/mongodb";
+import { getDb } from "@/lib/mongodb";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 
@@ -29,8 +29,7 @@ export async function POST(req: Request) {
   if (!auth)
     return NextResponse.json({ error: "Can not found user" }, { status: 401 });
 
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB);
+  const db = await getDb();
 
   const result = await db.collection("attendees").insertOne({
     attendeeId: new ObjectId(body.attendeeId),

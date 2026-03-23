@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import clientPromise from "@/lib/mongodb";
+import { getDb } from "@/lib/mongodb";
 
 type CachedPlace = {
   placeId: string;
@@ -18,11 +18,12 @@ export async function GET(req: NextRequest) {
 
   const normalizedQuery = q.toLowerCase();
 
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB);
-  const col = db.collection<{ query: string; places: CachedPlace[]; cachedAt: Date }>(
-    "place_searches",
-  );
+  const db = await getDb();
+  const col = db.collection<{
+    query: string;
+    places: CachedPlace[];
+    cachedAt: Date;
+  }>("place_searches");
 
   // ── Cache hit ──
   const cached = await col.findOne({ query: normalizedQuery });
@@ -31,15 +32,19 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Cache miss: call Google Places Text Search (New) ──
-  const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": process.env.GOOGLE_MAPS_API_KEY!,
-      "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location",
+  const res = await fetch(
+    "https://places.googleapis.com/v1/places:searchText",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": process.env.GOOGLE_MAPS_API_KEY!,
+        "X-Goog-FieldMask":
+          "places.id,places.displayName,places.formattedAddress,places.location",
+      },
+      body: JSON.stringify({ textQuery: q, pageSize: 5 }),
     },
-    body: JSON.stringify({ textQuery: q, pageSize: 5 }),
-  });
+  );
 
   const data = await res.json();
 
@@ -68,7 +73,9 @@ export async function GET(req: NextRequest) {
   // Store in cache (fire-and-forget)
   col
     .insertOne({ query: normalizedQuery, places, cachedAt: new Date() })
-    .catch((err) => console.error("[places/autocomplete] cache write failed:", err));
+    .catch((err) =>
+      console.error("[places/autocomplete] cache write failed:", err),
+    );
 
   return NextResponse.json({ predictions: places });
 }

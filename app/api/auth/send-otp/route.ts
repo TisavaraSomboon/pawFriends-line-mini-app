@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { Resend } from "resend";
-import clientPromise from "@/lib/mongodb";
+import { getDb } from "@/lib/mongodb";
 import { validateEmail } from "@/lib/validation";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -22,8 +22,7 @@ export async function POST(req: Request) {
   const hashed = await bcrypt.hash(code, 10);
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB);
+  const db = await getDb();
   console.log("OTP code 🌱:", code);
 
   // One active OTP per email — upsert replaces any previous code

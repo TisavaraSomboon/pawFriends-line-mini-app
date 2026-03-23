@@ -1,25 +1,15 @@
 import { MongoClient } from "mongodb";
+import { attachDatabasePool } from "@vercel/functions";
 
-  const uri = process.env.MONGODB_URI!;
-  const options: ConstructorParameters<typeof MongoClient>[1] = {};
+const uri = process.env.pawFriends_MONGODB_URI!;
+const options: ConstructorParameters<typeof MongoClient>[1] = {};
 
-  let client: MongoClient;
-  let clientPromise: Promise<MongoClient>;
+const client = new MongoClient(uri, options);
+const clientPromise = client.connect();
 
-  declare global {
-    // eslint-disable-next-line no-var
-    var _mongoClientPromise: Promise<MongoClient> | undefined;
-  }
-  if (process.env.NODE_ENV === "development") {
-    // Reuse connection across hot reloads in dev
-    if (!global._mongoClientPromise) {
-      client = new MongoClient(uri, options);
-      global._mongoClientPromise = client.connect();
-    }
-    clientPromise = global._mongoClientPromise;
-  } else {
-    client = new MongoClient(uri, options);
-    clientPromise = client.connect();
-  }
+attachDatabasePool(client);
 
-  export default clientPromise;
+export async function getDb() {
+  const client = await clientPromise;
+  return client.db(process.env.MONGODB_DB);
+}

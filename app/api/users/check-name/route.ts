@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
-import clientPromise from "@/lib/mongodb";
+import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
 // GET /api/users/check-name?name=John
@@ -15,8 +15,7 @@ export async function GET(req: Request) {
   }
 
   const auth = await getAuthUser();
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB);
+  const db = await getDb();
 
   const existing = await db.collection("users").findOne(
     {

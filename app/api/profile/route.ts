@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import clientPromise from "@/lib/mongodb";
+import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { User } from "@/lib/queries";
 
@@ -10,8 +10,7 @@ export async function GET(req: Request) {
 
   const userId = searchParams.get("userId") ?? auth?.userId;
 
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB);
+  const db = await getDb();
 
   const user = await db.collection("users").findOne(
     { _id: new ObjectId(userId) },
@@ -27,8 +26,7 @@ export async function PATCH(req: Request) {
   const userId = searchParams.get("userId");
   const body: Omit<User, "_id"> = await req.json();
 
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB);
+  const db = await getDb();
 
   await db.collection("users").updateOne(
     { _id: new ObjectId(userId!) },

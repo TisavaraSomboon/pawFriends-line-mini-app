@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import clientPromise from "@/lib/mongodb";
+import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { Pet } from "@/lib/queries";
 
@@ -18,8 +18,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB);
+  const db = await getDb();
 
   // By petId → single pet
   if (petId) {
@@ -43,8 +42,7 @@ export async function POST(req: Request) {
   const auth = await getAuthUser();
   const body: Omit<Pet, "_id"> = await req.json();
 
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB);
+  const db = await getDb();
 
   const petId = new ObjectId();
   await db.collection("pets").insertOne({
@@ -64,8 +62,7 @@ export async function PATCH(req: Request) {
 
   const body: Omit<Pet, "_id"> = await req.json();
 
-  const client = await clientPromise;
-  const db = client.db(process.env.MONGODB_DB);
+  const db = await getDb();
 
   await db.collection("pets").updateOne(
     { _id: new ObjectId(petId!) },
