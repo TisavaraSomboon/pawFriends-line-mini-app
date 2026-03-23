@@ -5,17 +5,19 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import dayjs from "dayjs";
 import {
+  Activity,
   Attendee,
   Pet,
   PetSizeCategory,
   useActivity,
-  useAuthUser,
   useCreateAttendees,
   useEndActivity,
   useProfile,
+  useUpdateAttendee,
 } from "@/lib/queries";
 import SpinLoader from "@/components/SpinLoader";
 import RequestModal from "@/components/RequestModal";
+import { useToast } from "@/components/Toast";
 
 const HERO =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuCXmfUp5G2wJWz4equkUn9ClUrly_jgGueg9dKc1DB71vnfbOxhh5U863IhThj58Yh6yu8yZXp9VZQjjqNke_14dUNexJm8p-jKtgxE0fKIAutsIr5GFBnNYLT3ehbUDTqkMbHPphfnLEKLbP51ybF6vIuYlDONPgJl_Jblbi1svV2cio-WBGh9oEUbLnKZCuUWTmAYjJGyNRGhdYDGMf-BWtXhT1MydFvpcuzqvBX_ExYk_wKSvPFWUE0XEU2sj7P3QdW_gRJjDbXL";
@@ -32,13 +34,12 @@ export default function ActivityDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
 
-  const { data: allProfiles, isPending: isUserPending } = useProfile();
+  const { data: allProfiles } = useProfile();
   const { data: activity, isFetching } = useActivity(id);
-  const { mutate: createAttendee } = useCreateAttendees();
   const { mutate: endedActivity } = useEndActivity(id);
   const isHost = allProfiles?.user?._id === activity?.owner._id;
 
-  const [openRequestModal, setOpenRequestModal] = useState(false);
+  const [joinActivityId, setJoinActivityId] = useState<string | null>(null);
   const [showRequests, setShowRequests] = useState(false);
 
   const requestAttendees =
@@ -47,6 +48,13 @@ export default function ActivityDetailPage() {
   const onActivityEnded = () => {
     endedActivity();
   };
+
+  const isAllPetJoined =
+    !!allProfiles &&
+    allProfiles.pets.length > 0 &&
+    allProfiles.pets.every((pet) =>
+      activity?.attendees?.some((a) => a.name === pet.name),
+    );
 
   useEffect(() => {
     if (activity?.status === "ended") {
@@ -92,21 +100,15 @@ export default function ActivityDetailPage() {
             />
           ) : (
             <UserAction
-              joined={
-                allProfiles?.pets.every((pet) =>
-                  activity?.attendees?.some((a) => a.name === pet.name),
-                ) ?? true
-              }
-              activityId={id}
+              joinActivityId={joinActivityId}
+              setJoinActivityId={setJoinActivityId}
+              activity={activity}
               pets={allProfiles?.pets ?? []}
-              openRequestModal={openRequestModal}
-              setOpenRequestModal={setOpenRequestModal}
+              isJoined={isAllPetJoined}
               onAttendeeJoin={() => {
-                if (allProfiles && allProfiles.pets.length > 0)
-                  setOpenRequestModal(true);
+                if (activity && allProfiles && allProfiles.pets.length > 0)
+                  setJoinActivityId(activity._id);
               }}
-              activityType={activity?.type}
-              activitySizes={activity?.sizes}
             />
           )}
         </div>
@@ -280,21 +282,15 @@ export default function ActivityDetailPage() {
                 />
               ) : (
                 <UserAction
-                  joined={
-                    allProfiles?.pets.every((pet) =>
-                      activity?.attendees?.some((a) => a.name === pet.name),
-                    ) ?? true
-                  }
-                  activityId={id}
+                  joinActivityId={joinActivityId}
+                  setJoinActivityId={setJoinActivityId}
+                  activity={activity}
                   pets={allProfiles?.pets ?? []}
-                  openRequestModal={openRequestModal}
-                  setOpenRequestModal={setOpenRequestModal}
+                  isJoined={isAllPetJoined}
                   onAttendeeJoin={() => {
-                    if (allProfiles && allProfiles.pets.length > 0)
-                      setOpenRequestModal(true);
+                    if (activity && allProfiles && allProfiles.pets.length > 0)
+                      setJoinActivityId(activity._id);
                   }}
-                  activityType={activity?.type}
-                  activitySizes={activity?.sizes}
                 />
               )}
             </div>
@@ -445,22 +441,18 @@ function ActivityContent({
 
 /* ── User action ── */
 function UserAction({
-  joined,
-  activityId,
+  joinActivityId,
+  activity,
   pets,
-  openRequestModal,
-  activitySizes,
-  activityType,
-  setOpenRequestModal,
+  isJoined,
+  setJoinActivityId,
   onAttendeeJoin,
 }: {
-  joined: boolean;
-  activityId: string;
+  joinActivityId: string | null;
+  activity?: Activity;
   pets: Pet[];
-  openRequestModal: boolean;
-  activitySizes?: string[];
-  activityType?: string;
-  setOpenRequestModal: (open: boolean) => void;
+  isJoined: boolean;
+  setJoinActivityId: (open: string | null) => void;
   onAttendeeJoin: () => void;
 }) {
   const { mutate: createAttendee } = useCreateAttendees();
@@ -471,29 +463,47 @@ function UserAction({
         onClick={onAttendeeJoin}
         className={`w-full h-14 rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-sm 
   active:scale-[0.98] ${
-    joined
+    isJoined
       ? "bg-white border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]"
       : "bg-[#e2cfb7] text-[#1e293b] hover:opacity-90"
   }`}
       >
         <span className="material-symbols-outlined">
-          {joined ? "check_circle" : "pets"}
+          {isJoined ? "check_circle" : "pets"}
         </span>
-        {joined ? "Joined!" : "Request to Join"}
+        {isJoined ? "Joined!" : "Request to Join"}
       </button>
-      <RequestModal
-        open={openRequestModal}
-        pets={pets}
-        activityType={activityType}
-        activitySizes={activitySizes}
-        onConfirm={(selectedId) => {
-          createAttendee(
-            { activityId, attendeeId: selectedId, role: "pet" },
-            { onSuccess: () => setOpenRequestModal(false) },
-          );
-        }}
-        onCancel={() => setOpenRequestModal(false)}
-      />
+      {activity && (
+        <RequestModal
+          open={!!joinActivityId}
+          pets={pets ?? []}
+          activityType={activity.type}
+          activitySizes={activity.sizes}
+          onConfirm={(selectedId, message) => {
+            if (!joinActivityId) return;
+            const pet = pets.find((p) => p._id === selectedId);
+            const sizeMatch =
+              !activity?.sizes?.length ||
+              !pet?.size ||
+              activity.sizes.includes(pet.size as PetSizeCategory);
+            createAttendee(
+              {
+                activityId: joinActivityId,
+                attendeeId: selectedId,
+                role: "pet",
+                status: sizeMatch ? "joined" : "pending",
+                requestMessage:
+                  message ??
+                  (sizeMatch
+                    ? undefined
+                    : "The dogs size not match with the request"),
+              },
+              { onSuccess: () => setJoinActivityId(null) },
+            );
+          }}
+          onCancel={() => setJoinActivityId(null)}
+        />
+      )}
     </>
   );
 }
@@ -510,6 +520,9 @@ function HostActions({
   setShowRequests: (v: boolean) => void;
   onEnded: () => void;
 }) {
+  const { toast } = useToast();
+  const { mutate: updateAttendee } = useUpdateAttendee();
+
   return (
     <div className="flex flex-col gap-3">
       <button
@@ -524,9 +537,9 @@ function HostActions({
 
       {showRequests && (
         <div className="bg-white rounded-xl border border-[#f1f5f9] divide-y divide-[#f1f5f9] overflow-hidden">
-          {attendees.map(({ name }) => (
+          {attendees.map(({ _id, name, requestMessage }) => (
             <div
-              key={name}
+              key={_id}
               className="flex items-center justify-between px-4 py-3 gap-3"
             >
               <div className="flex items-center gap-3">
@@ -535,11 +548,26 @@ function HostActions({
                 </div>
                 <div>
                   <p className="text-[14px] font-bold text-[#1e293b]">{name}</p>
-                  <p className="text-[12px] text-[#64748b]">Wants to join</p>
+                  {requestMessage && (
+                    <p className="text-[12px] text-[#64748b]">
+                      &quot;{requestMessage}&quot;
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex gap-2">
-                <button className="w-9 h-9 rounded-full bg-[rgba(226,207,183,0.3)] flex items-center justify-center hover:bg-[rgba(226,207,183,0.6)] transition-colors">
+                <button
+                  onClick={() =>
+                    updateAttendee(
+                      { _id, status: "joined" },
+                      {
+                        onSuccess: () => toast(`${name} has been approved!`, "success"),
+                        onError: () => toast("Failed to approve request.", "error"),
+                      },
+                    )
+                  }
+                  className="w-9 h-9 rounded-full bg-[rgba(226,207,183,0.3)] flex items-center justify-center hover:bg-[rgba(226,207,183,0.6)] transition-colors"
+                >
                   <span
                     className="material-symbols-outlined text-[#1e293b]"
                     style={{ fontSize: 18 }}
@@ -547,7 +575,18 @@ function HostActions({
                     check
                   </span>
                 </button>
-                <button className="w-9 h-9 rounded-full bg-[rgba(226,207,183,0.1)] border border-[#e2e8f0] flex items-center justify-center hover:bg-red-50 transition-colors">
+                <button
+                  onClick={() =>
+                    updateAttendee(
+                      { _id, status: "rejected" },
+                      {
+                        onSuccess: () => toast(`${name} has been rejected.`, "info"),
+                        onError: () => toast("Failed to reject request.", "error"),
+                      },
+                    )
+                  }
+                  className="w-9 h-9 rounded-full bg-[rgba(226,207,183,0.1)] border border-[#e2e8f0] flex items-center justify-center hover:bg-red-50 transition-colors"
+                >
                   <span
                     className="material-symbols-outlined text-[#94a3b8]"
                     style={{ fontSize: 18 }}

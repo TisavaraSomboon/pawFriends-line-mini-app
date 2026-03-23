@@ -2,6 +2,7 @@
 
 import { ACTIVITY_TYPE_BADGE } from "@/lib/constants";
 import { Activity, useUpdateAttendee } from "@/lib/queries";
+import { useToast } from "@/components/Toast";
 import dayjs from "dayjs";
 import calendar from "dayjs/plugin/calendar";
 import { useRouter } from "next/navigation";
@@ -14,6 +15,7 @@ dayjs.extend(calendar);
 
 export default function ActivitiesSection({ activity }: ActivityProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const { mutate: updateAttendee } = useUpdateAttendee();
   if (!activity) return;
   return (
@@ -127,7 +129,15 @@ export default function ActivitiesSection({ activity }: ActivityProps) {
                               </div>
                               <div className="flex gap-1">
                                 <button
-                                  onClick={() => updateAttendee({ _id, status: "joined" })}
+                                  onClick={() =>
+                                    updateAttendee(
+                                      { _id, status: "joined" },
+                                      {
+                                        onSuccess: () => toast(`${name} has been approved!`, "success"),
+                                        onError: () => toast("Failed to approve request.", "error"),
+                                      },
+                                    )
+                                  }
                                   className="w-7 h-7 rounded-lg bg-[#e2cfb7] flex items-center justify-center hover:opacity-80 transition-opacity"
                                 >
                                   <span
@@ -138,7 +148,15 @@ export default function ActivitiesSection({ activity }: ActivityProps) {
                                   </span>
                                 </button>
                                 <button
-                                  onClick={() => updateAttendee({ _id, status: "rejected" })}
+                                  onClick={() =>
+                                    updateAttendee(
+                                      { _id, status: "rejected" },
+                                      {
+                                        onSuccess: () => toast(`${name} has been rejected.`, "info"),
+                                        onError: () => toast("Failed to reject request.", "error"),
+                                      },
+                                    )
+                                  }
                                   className="w-7 h-7 rounded-lg bg-[#f1f5f9] flex items-center justify-center hover:bg-red-50 transition-colors"
                                 >
                                   <span
