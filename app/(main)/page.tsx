@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import ActivityCard from "@/components/ActivityCard";
-import { PetSizeCategory, useActivities, useCreateAttendees, useProfile } from "@/lib/queries";
+import {
+  PetSizeCategory,
+  useActivities,
+  useCreateAttendees,
+  useProfile,
+} from "@/lib/queries";
 import { ACTIVITY_TYPE_BADGE, formatActivityTime } from "@/lib/constants";
 import Image from "next/image";
 import SpinLoader from "@/components/SpinLoader";
@@ -52,7 +57,7 @@ export default function HomePage() {
                   >
                     location_on
                   </span>
-                  <span>Central Park, NY</span>
+                  <span>{allProfiles?.user?.locationName}</span>
                 </div>
               </div>
             </div>
@@ -88,7 +93,9 @@ export default function HomePage() {
               >
                 location_on
               </span>
-              <span>{allProfiles?.user?.locationName}</span>
+              <span className="text-ellipsis whitespace-nowrap overflow-hidden w-20">
+                {allProfiles?.user?.locationName}
+              </span>
             </div>
             <button className="w-10 h-10 rounded-full flex items-center justify-center bg-[rgba(226,207,183,0.2)] hover:bg-[rgba(226,207,183,0.4)] transition-colors">
               <span className="material-symbols-outlined text-[#1e293b]">
@@ -162,12 +169,20 @@ export default function HomePage() {
               <RequestModal
                 open={!!joinActivityId}
                 pets={allProfiles?.pets ?? []}
-                activityType={activities.find((a) => a._id === joinActivityId)?.type}
-                activitySizes={activities.find((a) => a._id === joinActivityId)?.sizes}
+                activityType={
+                  activities.find((a) => a._id === joinActivityId)?.type
+                }
+                activitySizes={
+                  activities.find((a) => a._id === joinActivityId)?.sizes
+                }
                 onConfirm={(selectedId, message) => {
                   if (!joinActivityId) return;
-                  const activity = activities.find((a) => a._id === joinActivityId);
-                  const pet = allProfiles?.pets.find((p) => p._id === selectedId);
+                  const activity = activities.find(
+                    (a) => a._id === joinActivityId,
+                  );
+                  const pet = allProfiles?.pets.find(
+                    (p) => p._id === selectedId,
+                  );
                   const sizeMatch =
                     !activity?.sizes?.length ||
                     !pet?.size ||
@@ -179,7 +194,10 @@ export default function HomePage() {
                       role: "pet",
                       status: sizeMatch ? "joined" : "pending",
                       requestMessage:
-                        message ?? (sizeMatch ? undefined : "The dogs size not match with the request"),
+                        message ??
+                        (sizeMatch
+                          ? undefined
+                          : "The dogs size not match with the request"),
                     },
                     { onSuccess: () => setJoinActivityId(null) },
                   );

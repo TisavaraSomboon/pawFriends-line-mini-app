@@ -5,6 +5,7 @@ import Image from "next/image";
 import clsx from "clsx";
 import type { Pet } from "@/lib/queries";
 import { useCompatibility } from "@/lib/queries";
+import SpinLoader from "./SpinLoader";
 
 type Props = {
   open: boolean;
@@ -72,7 +73,7 @@ export default function RequestModal({
 
   const selectedPet = pets.find((p) => p._id === selectedId);
 
-  const { data: compatibility, isFetching: isCompatibilityLoading } =
+  const { data: compatibility, isPending: isCompatibilityLoading } =
     useCompatibility(
       open && selectedPet && activityType
         ? {
@@ -212,11 +213,14 @@ export default function RequestModal({
             })}
           </div>
 
+          {isCompatibilityLoading && (
+            <SpinLoader title="Loading Compatibility" />
+          )}
           {/* ── Compatibility panel ── */}
           {selectedPet &&
-            activityType &&
+            compatibility &&
             (() => {
-              const pct = compatibility?.score ?? getCompatibility(selectedPet);
+              const pct = compatibility.score ?? getCompatibility(selectedPet);
               const color = getCompatibilityColor(pct);
               return (
                 <div className="mx-4 mt-6 mb-6 p-6 rounded-2xl bg-white shadow-sm border border-[#e1cfb7]/10">
@@ -233,13 +237,11 @@ export default function RequestModal({
                     </div>
                     <div className="flex flex-col">
                       <p className="text-[#1e293b] text-sm font-bold">
-                        AI Compatibility
+                        Compatibility
                       </p>
                       <p className="text-[#64748b] text-xs">
-                        {isCompatibilityLoading
-                          ? `Analyzing ${selectedPet.name ?? "your dog"} with activity…`
-                          : (compatibility?.reason ??
-                            "Breed · Vaccine · Flea & Tick")}
+                        {compatibility?.reason ??
+                          "Breed · Vaccine · Flea & Tick"}
                       </p>
                     </div>
                   </div>
@@ -315,8 +317,14 @@ export default function RequestModal({
             onClick={() =>
               selectedId && onConfirm(selectedId, message || undefined)
             }
-            disabled={!selectedId}
-            className="w-full bg-[#e1cfb7] text-[#1e293b] font-bold py-4 rounded-xl shadow-lg shadow-[#e1cfb7]/20 hover:scale-[0.98] active:scale-[0.95] transition-all disabled:opacity-50 disabled:pointer-events-none"
+            disabled={isCompatibilityLoading || !compatibility}
+            className={clsx(
+              "w-full bg-[#e1cfb7] text-[#1e293b] font-bold py-4 rounded-xl shadow-lg shadow-[#e1cfb7]/20 hover:scale-[0.98] active:scale-[0.95] transition-all disabled:opacity-50 disabled:pointer-events-none",
+              {
+                "opacity-50 pointer-events-none":
+                  !isCompatibilityLoading && !compatibility,
+              },
+            )}
           >
             {activityTitle ? `Join "${activityTitle}"` : "Continue to Activity"}
           </button>

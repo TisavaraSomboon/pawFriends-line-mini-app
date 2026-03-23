@@ -47,13 +47,6 @@ export default function ActivityDetailPage() {
   const onActivityEnded = () => {
     endedActivity();
   };
-  const onAttendeeJoin = (selectedId: string) => {
-    createAttendee({
-      activityId: id,
-      attendeeId: selectedId,
-      role: "pet",
-    });
-  };
 
   useEffect(() => {
     if (activity?.status === "ended") {
@@ -66,7 +59,7 @@ export default function ActivityDetailPage() {
   return (
     <div className="flex flex-col flex-1 min-w-0 min-h-dvh bg-[#f7f7f6]">
       {/* Top nav bar */}
-      <div className="flex items-center justify-between px-4 md:px-8 py-3 border-b border-[rgba(225,207,183,0.2)] bg-[#f7f7f6] sticky top-0 z-10">
+      <div className="flex items-center justify-between px-4 md:px-8 py-3 border-b border-[rgba(225,207,183,0.2)] bg-[#f7f7f6] sticky top-0">
         <button
           className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[rgba(226,207,183,0.2)] transition-colors"
           onClick={() => {
@@ -112,6 +105,8 @@ export default function ActivityDetailPage() {
                 if (allProfiles && allProfiles.pets.length > 0)
                   setOpenRequestModal(true);
               }}
+              activityType={activity?.type}
+              activitySizes={activity?.sizes}
             />
           )}
         </div>
@@ -298,6 +293,8 @@ export default function ActivityDetailPage() {
                     if (allProfiles && allProfiles.pets.length > 0)
                       setOpenRequestModal(true);
                   }}
+                  activityType={activity?.type}
+                  activitySizes={activity?.sizes}
                 />
               )}
             </div>
@@ -452,6 +449,8 @@ function UserAction({
   activityId,
   pets,
   openRequestModal,
+  activitySizes,
+  activityType,
   setOpenRequestModal,
   onAttendeeJoin,
 }: {
@@ -459,6 +458,8 @@ function UserAction({
   activityId: string;
   pets: Pet[];
   openRequestModal: boolean;
+  activitySizes?: string[];
+  activityType?: string;
   setOpenRequestModal: (open: boolean) => void;
   onAttendeeJoin: () => void;
 }) {
@@ -483,6 +484,8 @@ function UserAction({
       <RequestModal
         open={openRequestModal}
         pets={pets}
+        activityType={activityType}
+        activitySizes={activitySizes}
         onConfirm={(selectedId) => {
           createAttendee(
             { activityId, attendeeId: selectedId, role: "pet" },

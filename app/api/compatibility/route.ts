@@ -24,7 +24,8 @@ Reply with ONLY valid JSON, no markdown: {"score": <integer 0-100>, "reason": "<
     ],
   });
 
-  const text = (message.content[0] as { type: "text"; text: string }).text.trim();
+  const raw = (message.content[0] as { type: "text"; text: string }).text.trim();
+  const text = raw.replace(/^```[a-z]*\n?/i, "").replace(/```$/i, "").trim();
   const result = JSON.parse(text);
   return NextResponse.json(result);
 }
