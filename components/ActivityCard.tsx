@@ -2,10 +2,11 @@ import clsx from "clsx";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Tooltip from "./Tooltip";
 
-interface Avatar {
-  src: string;
-  alt: string;
+interface Attendees {
+  image: string;
+  name: string;
 }
 
 export interface ActivityCardProps {
@@ -15,7 +16,7 @@ export interface ActivityCardProps {
   badgeIcon: string;
   badgeLabel: string;
   title: string;
-  avatars: Avatar[];
+  attendees: Attendees[];
   extraCount: number;
   location: string;
   time: string;
@@ -24,6 +25,8 @@ export interface ActivityCardProps {
   hostName: string;
   isOwner?: boolean;
   isExpired?: boolean;
+  isDisableRequest?: boolean;
+  allPetsJoined?: boolean;
   onJoin?: () => void;
 }
 
@@ -34,7 +37,7 @@ export default function ActivityCard({
   badgeIcon,
   badgeLabel,
   title,
-  avatars,
+  attendees,
   extraCount,
   location,
   time,
@@ -43,9 +46,13 @@ export default function ActivityCard({
   hostName,
   isOwner,
   isExpired,
+  isDisableRequest,
+  allPetsJoined,
   onJoin,
 }: ActivityCardProps) {
   const router = useRouter();
+
+  console.log("attendees => ", attendees);
 
   return (
     <div className="relative">
@@ -94,21 +101,21 @@ export default function ActivityCard({
             <div className="flex justify-between items-start mb-2">
               <h3 className="text-[17px] font-bold text-[#1e293b]">{title}</h3>
               <div className="flex -space-x-2">
-                {avatars.map((av, i) => (
+                {attendees?.map((av, i) => (
                   <div
                     key={i}
                     className="w-6 h-6 rounded-full border-2 border-white bg-[#e2e8f0] overflow-hidden"
                   >
                     <Image
-                      src={av.src}
-                      alt={av.alt}
+                      src={av.image}
+                      alt={av.name}
                       className="w-full h-full object-cover rounded-full"
                       width={1098}
                       height={1098}
                     />
                   </div>
                 ))}
-                {avatars.length > 0 && (
+                {attendees && attendees.length > 0 && (
                   <div className="w-6 h-6 rounded-full border-2 border-white bg-[rgba(226,207,183,0.3)] flex items-center justify-center text-[10px] font-bold text-[#1e293b]">
                     +{extraCount}
                   </div>
@@ -175,21 +182,39 @@ export default function ActivityCard({
                 Manage
               </button>
             ) : (
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  onJoin?.();
-                }}
-                className="bg-[#e2cfb7] hover:opacity-90 text-[#1e293b] px-5 py-2.5 rounded-xl font-bold text-sm transition-opacity z-10 flex justify-center gap-1"
+              <Tooltip
+                label={
+                  <div className="w-30 text-wrap">
+                    {allPetsJoined
+                      ? "All your pets already joined this activity."
+                      : "You need to add at least 1 pet to join this activity."}
+                  </div>
+                }
+                isDisable={!isDisableRequest && !allPetsJoined}
               >
-                <span
-                  className="material-symbols-outlined"
-                  style={{ fontSize: 18 }}
+                <button
+                  disabled={isDisableRequest || allPetsJoined}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onJoin?.();
+                  }}
+                  className={clsx(
+                    "bg-[#e2cfb7] hover:opacity-90 text-[#1e293b] px-5 py-2.5 rounded-xl font-bold text-sm transition-opacity z-10 flex justify-center gap-1",
+                    {
+                      "opacity-50 hover:opacity-50!":
+                        isDisableRequest || allPetsJoined,
+                    },
+                  )}
                 >
-                  cards_stack
-                </span>
-                Request
-              </button>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 18 }}
+                  >
+                    cards_stack
+                  </span>
+                  Request
+                </button>
+              </Tooltip>
             )}
           </div>
         </div>

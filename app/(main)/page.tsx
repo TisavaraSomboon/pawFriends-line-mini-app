@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import ActivityCard from "@/components/ActivityCard";
-import { useRequireAuth } from "@/lib/hooks";
-import { useActivities } from "@/lib/queries";
+import { useActivities, useCreateAttendees, useProfile } from "@/lib/queries";
 import { ACTIVITY_TYPE_BADGE, formatActivityTime } from "@/lib/constants";
 import Image from "next/image";
 import SpinLoader from "@/components/SpinLoader";
+import RequestModal from "@/components/RequestModal";
 
 const FILTERS = ["All Activities", "Nearby", "Today", "Playdates"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -14,12 +14,14 @@ type Filter = (typeof FILTERS)[number];
 export default function HomePage() {
   const [activeFilter, setActiveFilter] = useState<Filter>("All Activities");
   const [search, setSearch] = useState("");
+  const [openRequestModal, setOpenRequestModal] = useState(false);
 
-  const { user, isLoading } = useRequireAuth();
+  const { data: allProfiles, isPending: isUserPending } = useProfile();
   const { data: activities, isFetching: isActivitiesFetching } =
     useActivities();
+  const { mutate: createAttendee } = useCreateAttendees();
 
-  if (isLoading || isActivitiesFetching)
+  if (isUserPending || isActivitiesFetching || isActivitiesFetching)
     return <SpinLoader title="Loading home" />;
 
   return (
@@ -86,7 +88,7 @@ export default function HomePage() {
               >
                 location_on
               </span>
-              <span>{user?.locationName}</span>
+              <span>{allProfiles?.user?.locationName}</span>
             </div>
             <button className="w-10 h-10 rounded-full flex items-center justify-center bg-[rgba(226,207,183,0.2)] hover:bg-[rgba(226,207,183,0.4)] transition-colors">
               <span className="material-symbols-outlined text-[#1e293b]">
@@ -163,29 +165,67 @@ export default function HomePage() {
                   label: activity.type,
                 };
                 return (
-                  <ActivityCard
-                    key={activity._id}
-                    id={activity._id}
-                    image={activity.image ?? ""}
-                    imageAlt={activity.title}
-                    badgeIcon={badge.icon}
-                    badgeLabel={badge.label}
-                    title={activity.title}
-                    avatars={[]}
-                    extraCount={activity.maxDogs}
-                    location={activity.locationName}
-                    time={formatActivityTime(
-                      activity.startDate,
-                      activity.endDate,
-                    )}
-                    hostAvatar=""
-                    hostAlt=""
-                    hostName=""
-                    isOwner={user?._id === activity.ownerId}
-                    isExpired={
-                      !activity.endDate || activity.endDate >= new Date()
-                    }
-                  />
+                  <div key={activity._id}>
+                    <RequestModal
+                      open={openRequestModal}
+                      pets={allProfiles?.pets ?? []}
+                      onConfirm={(selectedId) => {
+                        createAttendee(
+                          {
+                            activityId: activity._id,
+                            attendeeId: selectedId,
+                            role: "pet",
+                          },
+                          {
+                            onSuccess: () => {
+                              setOpenRequestModal(false);
+                            },
+                          },
+                        );
+                      }}
+                      onCancel={() => {
+                        setOpenRequestModal(false);
+                      }}
+                    />
+                    <ActivityCard
+                      key={activity._id}
+                      id={activity._id}
+                      image={activity.image ?? ""}
+                      imageAlt={activity.title}
+                      badgeIcon={badge.icon}
+                      badgeLabel={badge.label}
+                      title={activity.title}
+                      attendees={activity.attendees}
+                      extraCount={activity.maxDogs}
+                      location={activity.locationName}
+                      time={formatActivityTime(
+                        activity.startDate,
+                        activity.endDate,
+                      )}
+                      hostAvatar=""
+                      hostAlt=""
+                      hostName=""
+                      isOwner={allProfiles?.user?._id === activity?.owner?._id}
+                      isExpired={
+                        !!activity.endDate &&
+                        new Date(activity.endDate) < new Date()
+                      }
+                      isDisableRequest={
+                        !allProfiles || allProfiles.pets.length <= 0
+                      }
+                      allPetsJoined={
+                        !!allProfiles &&
+                        allProfiles.pets.length > 0 &&
+                        allProfiles.pets.every((pet) =>
+                          activity.attendees?.some((a) => a.name === pet.name),
+                        )
+                      }
+                      onJoin={() => {
+                        if (allProfiles && allProfiles.pets.length > 0)
+                          setOpenRequestModal(true);
+                      }}
+                    />
+                  </div>
                 );
               })}
             </div>

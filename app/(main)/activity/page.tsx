@@ -56,7 +56,7 @@ export default function ActivitiesPage() {
                   badgeIcon={badge.icon}
                   badgeLabel={badge.label}
                   title={activity.title}
-                  avatars={[]}
+                  attendees={activity.attendees}
                   extraCount={activity.maxDogs}
                   location={activity.locationName}
                   time={formatActivityTime(

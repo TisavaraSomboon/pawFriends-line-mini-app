@@ -50,7 +50,7 @@ export default function ProfilePage() {
   }, [profileId, allProfiles]);
 
   if (isUserPending || isUpdatePetPending || isActivitiesFetching)
-    return <SpinLoader title="Profile loading" />;
+    return <SpinLoader title="Loading Profile" />;
 
   if (!allProfiles)
     return (

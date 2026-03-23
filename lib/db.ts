@@ -52,13 +52,13 @@ export type ActivityDoc = {
   updatedAt: Date;
 };
 
-export type JoinRequestDoc = {
+export type AttendeesDoc = {
   _id?: ObjectId;
-  userId: ObjectId;
+  attendeeId: ObjectId;
   activityId: ObjectId;
   status: "pending" | "approved" | "rejected";
-  message?: string;
   createdAt: Date;
+  updateAt: Date;
 };
 
 async function getDb(): Promise<Db> {
@@ -76,7 +76,7 @@ export async function activitiesCol(): Promise<Collection<ActivityDoc>> {
   return db.collection<ActivityDoc>("activities");
 }
 
-export async function joinRequestsCol(): Promise<Collection<JoinRequestDoc>> {
+export async function attendeesCol(): Promise<Collection<AttendeesDoc>> {
   const db = await getDb();
-  return db.collection<JoinRequestDoc>("joinRequests");
+  return db.collection<AttendeesDoc>("attendees");
 }

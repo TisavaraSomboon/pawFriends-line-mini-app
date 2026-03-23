@@ -1,31 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import dayjs from "dayjs";
-import { PetSizeCategory, useActivity } from "@/lib/queries";
+import {
+  Attendee,
+  Pet,
+  PetSizeCategory,
+  useActivity,
+  useAuthUser,
+  useCreateAttendees,
+  useEndActivity,
+  useProfile,
+} from "@/lib/queries";
 import SpinLoader from "@/components/SpinLoader";
-
-const ATTENDEES = [
-  {
-    name: "Bella",
-    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuDS5b4OXDJ8IsGU2uWHjVLm2k_q-vX6J-DfXqn3g1qFLWgnthXt1U8yNOghfl-pdBGt21sihAIqxESDfXDDS914wQ1dr7NLeI_Ozhd2Swp4hi0LxwadD21e9xNJpiz65XCjUQeGvYRUfYyhONN3pQ45hTVrFmpvChwbjaVXZgrq96j_ycYYuDrP_bo-m4wm8TwLTOfqrSWMAMgIs1wjXXyCJ8gJBvsoxWGdDXIz8IiBZi2mc19Ir2MfrHBiAvIjKLEwzBOqMH7kB3-A",
-  },
-  {
-    name: "Cooper",
-    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuCiFMak9TEKkP4gI6X23YPwmGxe1GwtgyGu6uxpQGo9Nf92-ztgti4ifGNGjLJtXyjXErJQDkgoZlzwq5VISvKeilLE7tKO-vbJADSwNr6CRzRZojvG4dYfsWfuJW8jcjjoLhqiQYz22_HRY_b7-y3yctXvzDXiX2DrUtnXf8e5khgaxexcUVyGKGREFIShUiePkeYFZoIRXZDkJOwmpoHwuHIAz4S-Izu7Ab2j8Y7cuMn6zgUTB4wcTIa2yDckuPrPBVrZsFq5OU1d",
-  },
-  {
-    name: "Daisy",
-    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuD_TLx3ikjCrxeEEVHPlDhlXspkv10MmefYmcgXuThTecDJIzFhEfeN5697mAL2YLI_CrO4EdhrUA_h6IwcIYY0jw1tk4cxseKAgO61_QOYFLImgvwKtk6kKqJA6qlC72DmOFot6NzQ8H63XI4_WUjAQJ9gdqt80wzYDW1b0GZvIHeAplHel4CtF2zb_M6xeSYqzbDheMtp0o_Aa_0_8pXVxjT2KQtg9yO2CxYL8vmqcmo7icFUfJlfcERa_3wtCy83PsnaJYEHtGjL",
-  },
-  {
-    name: "Milo",
-    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuCL54sl5L0gykeqnF9A0n2oHFL1jlE4q-NVBbOEEAgDyhjjawVBsI-tvVYxw9DQpPaK7ANYCE9fgKn53CVsG_5KR_mqx_m4zGEV4A8YG-r7DoeZrBEbBMr2iG5OmkHeHHwV4kwDD_IaSI4WVq0HyDjOIrwRNjECDvTdo36RLfcsancvKVtp4uSjeLfgCjeEUpwPF2oZeHzNlqwn0nA084qBImXnSvjEFPD_ZwEvBqFbf5H7RZvNpgJeiUuCOjgcn7c8KECRZ_b1O9DJ",
-  },
-];
+import RequestModal from "@/components/RequestModal";
 
 const HERO =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuCXmfUp5G2wJWz4equkUn9ClUrly_jgGueg9dKc1DB71vnfbOxhh5U863IhThj58Yh6yu8yZXp9VZQjjqNke_14dUNexJm8p-jKtgxE0fKIAutsIr5GFBnNYLT3ehbUDTqkMbHPphfnLEKLbP51ybF6vIuYlDONPgJl_Jblbi1svV2cio-WBGh9oEUbLnKZCuUWTmAYjJGyNRGhdYDGMf-BWtXhT1MydFvpcuzqvBX_ExYk_wKSvPFWUE0XEU2sj7P3QdW_gRJjDbXL";
@@ -39,15 +29,37 @@ const size: { [key in PetSizeCategory]: string } = {
 };
 
 export default function ActivityDetailPage() {
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const isHost = searchParams.get("view") === "host";
 
+  const { data: allProfiles, isPending: isUserPending } = useProfile();
   const { data: activity, isFetching } = useActivity(id);
+  const { mutate: createAttendee } = useCreateAttendees();
+  const { mutate: endedActivity } = useEndActivity(id);
+  const isHost = allProfiles?.user?._id === activity?.owner._id;
 
-  const [joined, setJoined] = useState(false);
+  const [openRequestModal, setOpenRequestModal] = useState(false);
   const [showRequests, setShowRequests] = useState(false);
+
+  const requestAttendees =
+    activity?.attendees.filter((attendee) => attendee.status !== "joined") ??
+    [];
+  const onActivityEnded = () => {
+    endedActivity();
+  };
+  const onAttendeeJoin = (selectedId: string) => {
+    createAttendee({
+      activityId: id,
+      attendeeId: selectedId,
+      role: "pet",
+    });
+  };
+
+  useEffect(() => {
+    if (activity?.status === "ended") {
+      router.push("/");
+    }
+  }, [activity?.status, router]);
 
   if (isFetching) return <SpinLoader title="Loading activity" />;
 
@@ -72,16 +84,35 @@ export default function ActivityDetailPage() {
 
       {/* ── Mobile layout ── */}
       <div className="md:hidden flex-1 overflow-y-auto pb-32">
-        <ActivityContent isHost={isHost} />
+        <ActivityContent
+          isHost={isHost}
+          attendees={activity?.attendees ?? []}
+        />
         {/* Fixed bottom action bar */}
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-107.5 p-4 bg-[#f7f7f6]/80 backdrop-blur-md border-t border-[rgba(226,207,183,0.3)]">
           {isHost ? (
             <HostActions
+              attendees={requestAttendees}
               showRequests={showRequests}
               setShowRequests={setShowRequests}
+              onEnded={onActivityEnded}
             />
           ) : (
-            <UserAction joined={joined} setJoined={setJoined} />
+            <UserAction
+              joined={
+                allProfiles?.pets.every((pet) =>
+                  activity?.attendees?.some((a) => a.name === pet.name),
+                ) ?? true
+              }
+              activityId={id}
+              pets={allProfiles?.pets ?? []}
+              openRequestModal={openRequestModal}
+              setOpenRequestModal={setOpenRequestModal}
+              onAttendeeJoin={() => {
+                if (allProfiles && allProfiles.pets.length > 0)
+                  setOpenRequestModal(true);
+              }}
+            />
           )}
         </div>
       </div>
@@ -101,11 +132,14 @@ export default function ActivityDetailPage() {
             <h1 className="text-3xl font-bold text-[#1e293b] tracking-tight mb-3">
               {activity?.title}
             </h1>
-            <div className="flex flex-wrap gap-2">
-              <span className="bg-[rgba(226,207,183,0.4)] text-[#334155] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
-                {activity?.sizes.map((key) => `${size[key]} Dogs`).join(", ")}{" "}
-                Only
-              </span>
+            <div className="flex gap-2">
+              {activity?.sizes.map((key) => (
+                <div key={key} className="flex flex-wrap gap-2">
+                  <span className="bg-[rgba(226,207,183,0.4)] text-[#334155] px-3 py-1 rounded-full text-[8px] font-semibold uppercase tracking-wider">
+                    {`${size[key]} Dogs`}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -167,29 +201,29 @@ export default function ActivityDetailPage() {
           <div className="bg-white rounded-2xl border border-[#f1f5f9] px-5 py-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[17px] font-bold text-[#1e293b]">
-                Attendees ({ATTENDEES.length})
+                Attendees ({activity?.attendees?.length ?? 0})
               </h3>
               <button className="text-[13px] font-semibold text-[#64748b] hover:text-[#1e293b] transition-colors">
                 View All
               </button>
             </div>
             <div className="flex flex-wrap gap-4">
-              {ATTENDEES.map((a) => (
+              {activity?.attendees?.map(({ image, name }) => (
                 <div
-                  key={a.name}
+                  key={name}
                   className="flex flex-col items-center gap-1 w-16"
                 >
                   <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#e2cfb7]">
                     <Image
-                      src={a.src}
-                      alt={a.name}
+                      src={image}
+                      alt={name}
                       className="w-full h-full object-cover"
                       height={256}
                       width={256}
                     />
                   </div>
                   <p className="text-xs font-medium text-[#475569] text-center truncate w-full">
-                    {a.name}
+                    {name}
                   </p>
                 </div>
               ))}
@@ -208,7 +242,7 @@ export default function ActivityDetailPage() {
               <p className="text-[13px] text-[#64748b] mt-0.5">
                 {isHost
                   ? "Review requests and end activity"
-                  : "4 of 8 spots available"}
+                  : `${activity?.attendees.length} of ${activity?.amountOfAttendees ?? 0} spots available`}
               </p>
             </div>
 
@@ -216,22 +250,24 @@ export default function ActivityDetailPage() {
             <div className="px-5 py-4 border-b border-[#f1f5f9]">
               <div className="flex items-center gap-2">
                 <div className="flex -space-x-2">
-                  {ATTENDEES.slice(0, 3).map((a) => (
+                  {activity?.attendees?.slice(0, 3).map(({ image, name }) => (
                     <div
-                      key={a.name}
+                      key={name}
                       className="w-8 h-8 rounded-full border-2 border-white overflow-hidden"
                     >
-                      <img
-                        src={a.src}
-                        alt={a.name}
+                      <Image
+                        src={image}
+                        alt={name}
                         className="w-full h-full object-cover"
+                        width={256}
+                        height={256}
                       />
                     </div>
                   ))}
                 </div>
                 <p className="text-[13px] text-[#475569]">
                   <span className="font-bold text-[#1e293b]">
-                    {ATTENDEES.length} pups
+                    {activity?.attendees?.length} pups
                   </span>{" "}
                   already joined
                 </p>
@@ -242,11 +278,27 @@ export default function ActivityDetailPage() {
             <div className="px-5 py-5">
               {isHost ? (
                 <HostActions
+                  attendees={requestAttendees}
                   showRequests={showRequests}
                   setShowRequests={setShowRequests}
+                  onEnded={onActivityEnded}
                 />
               ) : (
-                <UserAction joined={joined} setJoined={setJoined} />
+                <UserAction
+                  joined={
+                    allProfiles?.pets.every((pet) =>
+                      activity?.attendees?.some((a) => a.name === pet.name),
+                    ) ?? true
+                  }
+                  activityId={id}
+                  pets={allProfiles?.pets ?? []}
+                  openRequestModal={openRequestModal}
+                  setOpenRequestModal={setOpenRequestModal}
+                  onAttendeeJoin={() => {
+                    if (allProfiles && allProfiles.pets.length > 0)
+                      setOpenRequestModal(true);
+                  }}
+                />
               )}
             </div>
           </div>
@@ -254,7 +306,10 @@ export default function ActivityDetailPage() {
           {/* Host info card */}
           <div className="bg-white rounded-2xl border border-[#f1f5f9] px-5 py-4 mt-4 flex items-center gap-3">
             <Image
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuzALWachO_YIj8n2rR-FLfaEYVj3LhYbo9hEjMEUR56kinTG63BRNgCKCr2UY94D71unYWxE4HXlvQwfOO6iH5U14SS6xGwZ_t0JPr2LaSWERa91zC5xmVFEP1EPhKdJ8RdW5EyNIgXqHO7I6fzubsaAgzj3wVnSlk40Xx5Gytefc7WB8s58QJOPu9U94Y_MWJX_HM2WRhjYJkQs6lMuDySUnFmGBw_Wn7XDJFOAxscL2Izuf3UznPYuNQVRv0x5nqBzhRT1i-uJ3"
+              src={
+                activity?.owner.image ??
+                "https://lh3.googleusercontent.com/aida-public/AB6AXuBuzALWachO_YIj8n2rR-FLfaEYVj3LhYbo9hEjMEUR56kinTG63BRNgCKCr2UY94D71unYWxE4HXlvQwfOO6iH5U14SS6xGwZ_t0JPr2LaSWERa91zC5xmVFEP1EPhKdJ8RdW5EyNIgXqHO7I6fzubsaAgzj3wVnSlk40Xx5Gytefc7WB8s58QJOPu9U94Y_MWJX_HM2WRhjYJkQs6lMuDySUnFmGBw_Wn7XDJFOAxscL2Izuf3UznPYuNQVRv0x5nqBzhRT1i-uJ3"
+              }
               alt="Host"
               className="w-10 h-10 rounded-full object-cover shrink-0"
               width={265}
@@ -263,7 +318,7 @@ export default function ActivityDetailPage() {
             <div className="flex-1 min-w-0">
               <p className="text-[13px] text-[#64748b]">Hosted by</p>
               <p className="text-[14px] font-bold text-[#1e293b] truncate">
-                Luna&apos;s Mom
+                {activity?.owner.name}
               </p>
             </div>
             <button className="text-[13px] font-semibold text-[#64748b] hover:text-[#1e293b] transition-colors shrink-0">
@@ -277,7 +332,13 @@ export default function ActivityDetailPage() {
 }
 
 /* ── Mobile activity content ── */
-function ActivityContent({ isHost }: { isHost: boolean }) {
+function ActivityContent({
+  isHost,
+  attendees,
+}: {
+  isHost: boolean;
+  attendees: Attendee[];
+}) {
   return (
     <div>
       {/* Hero image */}
@@ -356,24 +417,26 @@ function ActivityContent({ isHost }: { isHost: boolean }) {
       <div className="px-4 py-6 border-t border-[rgba(226,207,183,0.2)]">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-[18px] font-bold text-[#1e293b]">
-            Attendees ({ATTENDEES.length})
+            Attendees ({attendees?.length})
           </h3>
           <button className="text-[13px] font-semibold text-[#64748b] hover:text-[#1e293b] transition-colors">
             View All
           </button>
         </div>
         <div className="flex flex-wrap gap-4">
-          {ATTENDEES.map((a) => (
-            <div key={a.name} className="flex flex-col items-center gap-1 w-16">
+          {attendees?.map(({ image, name }) => (
+            <div key={name} className="flex flex-col items-center gap-1 w-16">
               <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#e2cfb7]">
-                <img
-                  src={a.src}
-                  alt={a.name}
+                <Image
+                  src={image}
+                  alt={name}
                   className="w-full h-full object-cover"
+                  width={256}
+                  height={256}
                 />
               </div>
               <p className="text-xs font-medium text-[#475569] text-center truncate w-full">
-                {a.name}
+                {name}
               </p>
             </div>
           ))}
@@ -386,35 +449,63 @@ function ActivityContent({ isHost }: { isHost: boolean }) {
 /* ── User action ── */
 function UserAction({
   joined,
-  setJoined,
+  activityId,
+  pets,
+  openRequestModal,
+  setOpenRequestModal,
+  onAttendeeJoin,
 }: {
   joined: boolean;
-  setJoined: (v: boolean) => void;
+  activityId: string;
+  pets: Pet[];
+  openRequestModal: boolean;
+  setOpenRequestModal: (open: boolean) => void;
+  onAttendeeJoin: () => void;
 }) {
+  const { mutate: createAttendee } = useCreateAttendees();
+
   return (
-    <button
-      onClick={() => setJoined(!joined)}
-      className={`w-full h-14 rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98] ${
-        joined
-          ? "bg-white border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]"
-          : "bg-[#e2cfb7] text-[#1e293b] hover:opacity-90"
-      }`}
-    >
-      <span className="material-symbols-outlined">
-        {joined ? "check_circle" : "pets"}
-      </span>
-      {joined ? "Joined!" : "Request to Join"}
-    </button>
+    <>
+      <button
+        onClick={onAttendeeJoin}
+        className={`w-full h-14 rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-sm 
+  active:scale-[0.98] ${
+    joined
+      ? "bg-white border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]"
+      : "bg-[#e2cfb7] text-[#1e293b] hover:opacity-90"
+  }`}
+      >
+        <span className="material-symbols-outlined">
+          {joined ? "check_circle" : "pets"}
+        </span>
+        {joined ? "Joined!" : "Request to Join"}
+      </button>
+      <RequestModal
+        open={openRequestModal}
+        pets={pets}
+        onConfirm={(selectedId) => {
+          createAttendee(
+            { activityId, attendeeId: selectedId, role: "pet" },
+            { onSuccess: () => setOpenRequestModal(false) },
+          );
+        }}
+        onCancel={() => setOpenRequestModal(false)}
+      />
+    </>
   );
 }
 
 /* ── Host actions ── */
 function HostActions({
+  attendees,
   showRequests,
   setShowRequests,
+  onEnded,
 }: {
+  attendees: Attendee[];
   showRequests: boolean;
   setShowRequests: (v: boolean) => void;
+  onEnded: () => void;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -423,12 +514,14 @@ function HostActions({
         className="w-full h-14 bg-white border-2 border-[#e2cfb7] text-[#1e293b] font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[rgba(226,207,183,0.1)] transition-all active:scale-[0.98]"
       >
         <span className="material-symbols-outlined">person_add</span>
-        {showRequests ? "Hide Requests" : "Manage Requests (3)"}
+        {showRequests
+          ? "Hide Requests"
+          : `Manage Requests (${attendees.length ?? 0})`}
       </button>
 
       {showRequests && (
         <div className="bg-white rounded-xl border border-[#f1f5f9] divide-y divide-[#f1f5f9] overflow-hidden">
-          {["Rex", "Honey", "Archie"].map((name) => (
+          {attendees.map(({ name }) => (
             <div
               key={name}
               className="flex items-center justify-between px-4 py-3 gap-3"
@@ -465,7 +558,10 @@ function HostActions({
         </div>
       )}
 
-      <button className="w-full h-14 bg-[#1e293b] text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm active:scale-[0.98]">
+      <button
+        className="w-full h-14 bg-[#1e293b] text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm active:scale-[0.98]"
+        onClick={onEnded}
+      >
         <span className="material-symbols-outlined">pets</span>
         End Activity
       </button>

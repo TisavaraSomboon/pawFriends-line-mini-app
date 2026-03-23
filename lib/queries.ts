@@ -155,7 +155,8 @@ async function uploadFileToSignedUrl(
 // Centralise all keys so invalidation is consistent across the app
 export const keys = {
   activities: ["activities"] as const,
-  activity: (id: string) => ["activities", id] as const,
+  userActivities: (id: string) => ["activities", id] as const,
+  activity: (id: string) => ["activity", id] as const,
   profile: (userId: string) => ["profile", userId] as const,
 };
 
@@ -185,7 +186,7 @@ export function usePlacesAutocomplete(query: string) {
 
 export function useActivities(userId?: string) {
   return useQuery({
-    queryKey: keys.activities,
+    queryKey: userId ? ["userActivities", userId] : keys.activities,
     queryFn: () =>
       apiFetch<Activity[]>(
         `/api/activities${userId ? `?userId=${userId}` : ""}`,
@@ -193,11 +194,11 @@ export function useActivities(userId?: string) {
   });
 }
 
-export function useActivity(id: string) {
+export function useActivity(activityId: string) {
   return useQuery({
-    queryKey: keys.activity(id),
-    queryFn: () => apiFetch<Activity>(`/api/activities/${id}`),
-    enabled: !!id, // only run when id is available
+    queryKey: keys.activity(activityId),
+    queryFn: () => apiFetch<Activity>(`/api/activities/${activityId}`),
+    enabled: !!activityId, // only run when id is available
   });
 }
 
@@ -223,6 +224,21 @@ export function useCreateActivity() {
   });
 }
 
+export function useEndActivity(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiFetch(`/api/activities/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "ended" }),
+      }),
+    onSuccess: () => {
+      // Refresh the activity list after creating
+      queryClient.invalidateQueries({ queryKey: keys.activity(id) });
+    },
+  });
+}
+
 export function useUpdateActivity(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -233,6 +249,30 @@ export function useUpdateActivity(id: string) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: keys.activity(id) });
+    },
+  });
+}
+
+export function useAttendees(activityId: string) {
+  return useQuery({
+    queryKey: ["attendees"],
+    queryFn: () =>
+      apiFetch<Activity>(
+        `/api/attendees${activityId ? `?activityId=${activityId}` : ""}`,
+      ),
+  });
+}
+
+export function useCreateAttendees() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Partial<AttendeeReq>) =>
+      apiFetch(`/api/attendees`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendees"] });
     },
   });
 }
@@ -299,6 +339,7 @@ export function usePetProfile(petId: string) {
 }
 
 export function useCreatePetProfile() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (
       body:
@@ -321,6 +362,9 @@ export function useCreatePetProfile() {
           longitude: undefined,
         }),
       });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
     },
   });
 }
@@ -425,6 +469,26 @@ export function useRegister() {
   });
 }
 
+export function useSendOtp() {
+  return useMutation({
+    mutationFn: (email: string) =>
+      apiFetch("/api/auth/send-otp", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }),
+  });
+}
+
+export function useVerifyOtp() {
+  return useMutation({
+    mutationFn: ({ email, code }: { email: string; code: string }) =>
+      apiFetch("/api/auth/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({ email, code }),
+      }),
+  });
+}
+
 export function useCheckName() {
   return useMutation({
     mutationFn: (name: string) =>
@@ -438,7 +502,7 @@ export function useCheckName() {
 
 export type Activity = {
   _id: string;
-  ownerId: string;
+  owner: { _id: string; name: string; image: string };
   title: string;
   description?: string;
   locationName: string;
@@ -448,10 +512,12 @@ export type Activity = {
   endDate?: Date;
   type: string;
   sizes: PetSizeCategory[];
+  amountOfAttendees: number;
   maxDogs: number;
   image?: string;
   status: "active" | "ended";
   hostId: string;
+  attendees: Attendee[];
 };
 
 export type Pet = {
@@ -545,3 +611,20 @@ export enum PetEnergyLevel {
 // }
 
 export type PetSizeCategory = "XS" | "SM" | "MD" | "LG" | "XL";
+
+export type Attendee = {
+  image: string;
+  name: string;
+  role: "pet" | "owner";
+  status: "pending" | "joined";
+  requestMessage?: string;
+};
+
+export type AttendeeReq = {
+  _id: string;
+  attendeeId: string;
+  activityId: string;
+  status?: "pending" | "joined";
+  requestMessage?: string;
+  role: "pet" | "user";
+};

@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "cdn.zentry.com",
       },
+      {
+        protocol: "https",
+        hostname: "images.pexels.com",
+      },
     ],
     // Cache optimized images for 7 days on the CDN/browser
     minimumCacheTTL: 60 * 60 * 24 * 7,

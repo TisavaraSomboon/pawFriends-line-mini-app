@@ -11,12 +11,121 @@ export async function GET(req: Request) {
   const auth = await getAuthUser();
 
   const col = await activitiesCol();
+
+  // Mark activities as "ended" if their endDate has passed
+  // Uses $toDate to handle endDate stored as either string or Date
+  await col.updateMany(
+    { status: "active", endDate: { $exists: true, $ne: null } },
+    [
+      {
+        $set: {
+          status: {
+            $cond: {
+              if: { $lt: [{ $toDate: "$endDate" }, new Date()] },
+              then: "ended",
+              else: "$status",
+            },
+          },
+          updatedAt: new Date(),
+        },
+      },
+    ],
+  );
+
   const activities = await col
-    .find({
-      status: "active",
-      ...(userId && { userId: userId === "owner" ? auth?.userId : userId }),
-    })
-    .sort({ date: 1 })
+    .aggregate([
+      {
+        $match: {
+          status: "active",
+          ...(userId && {
+            ownerId: new ObjectId(userId === "owner" ? auth?.userId : userId),
+          }),
+        },
+      },
+      {
+        $lookup: {
+          from: "attendees",
+          let: { actId: "$_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$activityId", "$$actId"] } } },
+            // Join pets for role "pet"
+            {
+              $lookup: {
+                from: "pets",
+                localField: "attendeeId",
+                foreignField: "_id",
+                as: "petProfile",
+                pipeline: [{ $project: { name: 1, image: 1 } }],
+              },
+            },
+            // Join users for role "user"
+            {
+              $lookup: {
+                from: "users",
+                localField: "attendeeId",
+                foreignField: "_id",
+                as: "userProfile",
+                pipeline: [{ $project: { name: 1, image: 1 } }],
+              },
+            },
+            {
+              $unwind: {
+                path: "$petProfile",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $unwind: {
+                path: "$userProfile",
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            // Pick profile based on role
+            {
+              $addFields: {
+                profile: {
+                  $cond: {
+                    if: { $eq: ["$role", "pet"] },
+                    then: "$petProfile",
+                    else: "$userProfile",
+                  },
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                name: "$profile.name",
+                image: "$profile.image",
+                role: "$role",
+                status: "$status",
+                requestMessage: "$requestMessage",
+              },
+            },
+          ],
+          as: "attendees",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          let: { ownerId: "$ownerId" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$ownerId"] } } },
+            { $project: { _id: 1, name: 1, image: 1 } },
+          ],
+          as: "owner",
+        },
+      },
+      {
+        $unwind: {
+          path: "$owner",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      { $unset: "ownerId" },
+      { $sort: { date: 1 } },
+    ])
     .toArray();
 
   return NextResponse.json(activities);

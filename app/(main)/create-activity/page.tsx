@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
-import { useForm, Controller, UseFormRegisterReturn } from "react-hook-form";
+import { useForm, Controller, useWatch, Control, FieldErrors, UseFormRegisterReturn } from "react-hook-form";
 import { clsx } from "clsx";
 import Link from "next/link";
 import Footer from "@/components/MobileFooter";
 import CoverPhotoPicker from "@/components/CoverPhotoPicker";
 import {
+  PetSizeCategory,
   useAuthUser,
   useCreateActivity,
   useGeneratePhoto,
@@ -14,7 +15,6 @@ import {
 import { useToast } from "@/components/Toast";
 import { useRouter } from "next/navigation";
 import LocationAutoComplete from "@/components/LocationAutocomplete";
-import Spinner from "@/components/Spinner";
 import SpinLoader from "@/components/SpinLoader";
 
 const ACTIVITY_TYPES = [
@@ -26,7 +26,7 @@ const ACTIVITY_TYPES = [
   { id: "agility", icon: "🏆", label: "Agility" },
 ];
 
-const SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "All Sizes"];
+const SIZE_OPTIONS: PetSizeCategory[] = ["XS", "SM", "MD", "LG", "XL"];
 
 const labelClass = "text-[13px] font-semibold text-[#334155] mb-2 block ml-1";
 const inputClass =
@@ -39,7 +39,8 @@ type ActivityForm = {
   locationName: string;
   latitude: number | null;
   longitude: number | null;
-  sizes: string[];
+  sizes: PetSizeCategory[];
+  amountOfAttendees: number;
   dogLimit: number;
   startDate: string;
   endDate: string;
@@ -78,7 +79,7 @@ export default function CreateActivityPage() {
       locationName: "",
       latitude: null,
       longitude: null,
-      sizes: ["All Sizes"],
+      sizes: ["MD"],
       dogLimit: 8,
       startDate: "",
       endDate: "",
@@ -88,10 +89,11 @@ export default function CreateActivityPage() {
 
   if (isPending) return <SpinLoader title="Creating the activity" />;
 
-  const onSubmit = (data: ActivityForm) => {
+  const onSubmit = ({ dogLimit, ...data }: ActivityForm) => {
     createActivity(
       {
         ...data,
+        amountOfAttendees: dogLimit,
         image: coverFile ?? selectedAiUrl ?? undefined,
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
@@ -225,16 +227,7 @@ export default function CreateActivityPage() {
                 </p>
               )}
             </div>
-            <DateRangeSection
-              startDateReg={register("startDate", {
-                required: "Start date is required.",
-              })}
-              endDateReg={register("endDate", {
-                required: "End date is required.",
-              })}
-              startError={errors.startDate?.message}
-              endError={errors.endDate?.message}
-            />
+            <DateRangeSection control={control} errors={errors} />
             <Controller
               control={control}
               name="sizes"
@@ -330,16 +323,7 @@ export default function CreateActivityPage() {
                   </p>
                 )}
               </div>
-              <DateRangeSection
-                startDateReg={register("startDate", {
-                  required: "Start date is required.",
-                })}
-                endDateReg={register("endDate", {
-                  required: "End date is required.",
-                })}
-                startError={errors.startDate?.message}
-                endError={errors.endDate?.message}
-              />
+              <DateRangeSection control={control} errors={errors} />
               <DescriptionSection
                 registration={register("description", {
                   required: "Description is required.",
@@ -420,52 +404,94 @@ function ActivityTypeSection({
 }
 
 function DateRangeSection({
-  startDateReg,
-  endDateReg,
-  startError,
-  endError,
+  control,
+  errors,
 }: {
-  startDateReg: UseFormRegisterReturn;
-  endDateReg: UseFormRegisterReturn;
-  startError?: string;
-  endError?: string;
+  control: Control<ActivityForm>;
+  errors: FieldErrors<ActivityForm>;
 }) {
+  const startDate = useWatch({ control, name: "startDate" });
+  const hasError = errors.startDate || errors.endDate;
+
   return (
-    <div className="flex flex-col gap-3">
-      <div>
-        <label className={labelClass}>
-          Start <span className="text-red-400">*</span>
-        </label>
-        <input
-          type="datetime-local"
-          className={clsx(
-            inputClass,
-            startError &&
-              "border-red-400 focus:border-red-400 focus:ring-red-100",
-          )}
-          {...startDateReg}
-        />
-        {startError && (
-          <p className="text-[11px] text-red-500 mt-1 ml-0.5">{startError}</p>
+    <div>
+      <label className={labelClass}>
+        Date &amp; Time <span className="text-red-400">*</span>
+      </label>
+      <div
+        className={clsx(
+          "bg-white rounded-[14px] border divide-y",
+          hasError
+            ? "border-red-400 divide-red-100"
+            : "border-[rgba(226,207,183,0.4)] divide-[rgba(226,207,183,0.4)]",
         )}
+      >
+        {/* Start row */}
+        <div className="flex items-center px-4 gap-3">
+          <span
+            className="material-symbols-outlined text-[#94a3b8]"
+            style={{ fontSize: 18 }}
+          >
+            play_circle
+          </span>
+          <div className="flex-1 py-2">
+            <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-0.5">
+              Start
+            </p>
+            <Controller
+              control={control}
+              name="startDate"
+              rules={{ required: "Start date is required." }}
+              render={({ field }) => (
+                <input
+                  type="datetime-local"
+                  className="w-full text-[14px] text-[#1e293b] bg-transparent outline-none"
+                  {...field}
+                />
+              )}
+            />
+          </div>
+        </div>
+
+        {/* End row */}
+        <div className="flex items-center px-4 gap-3">
+          <span
+            className="material-symbols-outlined text-[#94a3b8]"
+            style={{ fontSize: 18 }}
+          >
+            stop_circle
+          </span>
+          <div className="flex-1 py-2">
+            <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-0.5">
+              End
+            </p>
+            <Controller
+              control={control}
+              name="endDate"
+              rules={{ required: "End date is required." }}
+              render={({ field }) => (
+                <input
+                  type="datetime-local"
+                  min={startDate || undefined}
+                  className="w-full text-[14px] text-[#1e293b] bg-transparent outline-none"
+                  {...field}
+                />
+              )}
+            />
+          </div>
+        </div>
       </div>
-      <div>
-        <label className={labelClass}>
-          End (Expiry) <span className="text-red-400">*</span>
-        </label>
-        <input
-          type="datetime-local"
-          className={clsx(
-            inputClass,
-            endError &&
-              "border-red-400 focus:border-red-400 focus:ring-red-100",
-          )}
-          {...endDateReg}
-        />
-        {endError && (
-          <p className="text-[11px] text-red-500 mt-1 ml-0.5">{endError}</p>
-        )}
-      </div>
+
+      {errors.startDate && (
+        <p className="text-[11px] text-red-500 mt-1 ml-0.5">
+          {errors.startDate.message}
+        </p>
+      )}
+      {errors.endDate && (
+        <p className="text-[11px] text-red-500 mt-1 ml-0.5">
+          {errors.endDate.message}
+        </p>
+      )}
     </div>
   );
 }
@@ -474,19 +500,12 @@ function DogSizeSection({
   value,
   onChange,
 }: {
-  value: string[];
-  onChange: (sizes: string[]) => void;
+  value: PetSizeCategory[];
+  onChange: (sizes: PetSizeCategory[]) => void;
 }) {
-  const toggle = (size: string) => {
-    if (size === "All Sizes") {
-      onChange(["All Sizes"]);
-      return;
-    }
-    const filtered = value.filter((s) => s !== "All Sizes");
+  const toggle = (size: PetSizeCategory) => {
     onChange(
-      filtered.includes(size)
-        ? filtered.filter((s) => s !== size)
-        : [...filtered, size],
+      value.includes(size) ? value.filter((s) => s !== size) : [...value, size],
     );
   };
 
