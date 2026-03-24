@@ -183,6 +183,7 @@ export default function ProfilePage() {
               vaccine={member.vaccine}
               fleaTick={member.fleaTick}
               breed={member.breed}
+              ageGroup={member.ageGroup}
               energyLevel={member.energyLevel}
               emotions={member.emotions}
               socialStyle={member.socialStyle}
@@ -267,6 +268,7 @@ export default function ProfilePage() {
                 vaccine={member.vaccine}
                 fleaTick={member.fleaTick}
                 breed={member.breed}
+                ageGroup={member.ageGroup}
                 energyLevel={member.energyLevel}
                 emotions={member.emotions}
                 socialStyle={member.socialStyle}

@@ -250,6 +250,35 @@ export function useCreateActivity() {
   });
 }
 
+export type PetInsight = { icon: string; text: string };
+
+export type PetInsightsResult = {
+  careTips: PetInsight[];
+  agePrecautions: PetInsight[];
+  diseases: PetInsight[];
+  behaviorExpectations: PetInsight[];
+  illustrationUrl?: string;
+};
+
+export function usePetInsights(params: {
+  breed?: string;
+  ageGroup?: string;
+  energyLevel?: PetEnergyLevel;
+  emotions?: string[];
+  behaviorTraits?: string[];
+} | null) {
+  return useQuery({
+    queryKey: ["petInsights", params],
+    queryFn: () =>
+      apiFetch<PetInsightsResult>("/api/pet-insights", {
+        method: "POST",
+        body: JSON.stringify(params),
+      }),
+    enabled: !!params,
+    staleTime: Infinity,
+  });
+}
+
 export function useSendFeedback() {
   return useMutation({
     mutationFn: (message: string) =>

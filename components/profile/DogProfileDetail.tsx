@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { PetEnergyLevel } from "@/lib/queries";
+import { PetAgeGroup, PetEnergyLevel } from "@/lib/queries";
 import ConfirmModal from "@/components/ConfirmModal";
 import PetCardVerifyModal from "@/components/profile/PetCardVerifyModal";
 import VaccineVerifyModal from "@/components/profile/VaccineVerifyModal";
+import PetInsightsCard from "@/components/profile/PetInsightsCard";
 import clsx from "clsx";
 
 export default function DogProfileDetail({
@@ -12,6 +13,7 @@ export default function DogProfileDetail({
   vaccine,
   fleaTick,
   breed,
+  ageGroup,
   energyLevel,
   emotions,
   socialStyle,
@@ -26,6 +28,7 @@ export default function DogProfileDetail({
   vaccine?: boolean;
   fleaTick?: boolean;
   breed?: string;
+  ageGroup?: PetAgeGroup;
   energyLevel?: PetEnergyLevel;
   emotions?: string[];
   socialStyle?: string;
@@ -336,6 +339,18 @@ export default function DogProfileDetail({
         <p className="text-[13px] text-amber-900 leading-relaxed">
           {considerNote}
         </p>
+      </div>
+
+      {/* AI-generated care insights */}
+      <div className="mt-2">
+        <PetInsightsCard
+          name={name}
+          breed={breed}
+          ageGroup={ageGroup}
+          energyLevel={energyLevel}
+          emotions={emotions}
+          behaviorTraits={behaviorTraits}
+        />
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const col = await feedbackCol();
   await col.insertOne({
     userId: auth?.userId,
-    userName: auth?.name,
+    userName: auth?.email,
     message: body.message.trim(),
     createdAt: new Date(),
   });
