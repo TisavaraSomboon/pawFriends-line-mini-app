@@ -436,7 +436,12 @@ export function useVerifyVaccine() {
   return useMutation({
     mutationFn: (body: { image: string; mimeType: string }) =>
       apiFetch<{
-        vaccines: { name: string; date: string; nextDate: string | null; isCurrent: boolean }[];
+        vaccines: {
+          name: string;
+          date: string;
+          nextDate: string | null;
+          isCurrent: boolean;
+        }[];
         hasCurrentVaccine: boolean;
         summary: string;
       }>("/api/pets/verify-vaccine", {
@@ -693,6 +698,8 @@ export type Attendee = {
   role: "pet" | "owner";
   status: "pending" | "joined" | "rejected";
   requestMessage?: string;
+  ownerId?: string;
+  attendeeId?: string;
 };
 
 export type AttendeeReq = {

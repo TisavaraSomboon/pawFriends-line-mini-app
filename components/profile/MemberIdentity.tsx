@@ -9,7 +9,7 @@ export default function MemberIdentity({
 }: {
   member: User | Omit<Pet, "_id" | "userId">;
   compact?: boolean;
-  onEdit: () => void;
+  onEdit?: () => void;
 }) {
   return (
     <div className="relative flex flex-col text-center w-full transition-all duration-200">

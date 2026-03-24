@@ -55,7 +55,7 @@ export async function GET(req: Request) {
                 localField: "attendeeId",
                 foreignField: "_id",
                 as: "petProfile",
-                pipeline: [{ $project: { name: 1, image: 1 } }],
+                pipeline: [{ $project: { name: 1, image: 1, ownerId: 1 } }],
               },
             },
             // Join users for role "user"
@@ -100,6 +100,8 @@ export async function GET(req: Request) {
                 role: "$role",
                 status: "$status",
                 requestMessage: "$requestMessage",
+                ownerId: "$profile.ownerId",
+                attendeeId: "$attendeeId",
               },
             },
           ],

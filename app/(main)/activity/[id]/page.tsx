@@ -85,10 +85,7 @@ export default function ActivityDetailPage() {
 
       {/* ── Mobile layout ── */}
       <div className="md:hidden flex-1 overflow-y-auto pb-32">
-        <ActivityContent
-          isHost={isHost}
-          attendees={activity?.attendees ?? []}
-        />
+        <ActivityContent attendees={activity?.attendees ?? []} />
         {/* Fixed bottom action bar */}
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-107.5 p-4 bg-[#f7f7f6]/80 backdrop-blur-md border-t border-[rgba(226,207,183,0.3)]">
           {isHost ? (
@@ -200,30 +197,35 @@ export default function ActivityDetailPage() {
               <h3 className="text-[17px] font-bold text-[#1e293b]">
                 Attendees ({activity?.attendees?.length ?? 0})
               </h3>
-              <button className="text-[13px] font-semibold text-[#64748b] hover:text-[#1e293b] transition-colors">
-                View All
-              </button>
             </div>
             <div className="flex flex-wrap gap-4">
-              {activity?.attendees?.map(({ image, name }) => (
-                <div
-                  key={name}
-                  className="flex flex-col items-center gap-1 w-16"
-                >
-                  <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#e2cfb7]">
-                    <Image
-                      src={image}
-                      alt={name}
-                      className="w-full h-full object-cover"
-                      height={256}
-                      width={256}
-                    />
-                  </div>
-                  <p className="text-xs font-medium text-[#475569] text-center truncate w-full">
-                    {name}
-                  </p>
-                </div>
-              ))}
+              {activity?.attendees?.map(
+                ({ image, name, ownerId, attendeeId }) => (
+                  <button
+                    key={name}
+                    onClick={() =>
+                      ownerId &&
+                      router.push(
+                        `/profile/${ownerId}${attendeeId ? `?Id=${attendeeId}` : ""}`,
+                      )
+                    }
+                    className="flex flex-col items-center gap-1 w-16 cursor-pointer"
+                  >
+                    <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#e2cfb7]">
+                      <Image
+                        src={image}
+                        alt={name}
+                        className="w-full h-full object-cover"
+                        height={256}
+                        width={256}
+                      />
+                    </div>
+                    <p className="text-xs font-medium text-[#475569] text-center truncate w-full">
+                      {name}
+                    </p>
+                  </button>
+                ),
+              )}
             </div>
           </div>
         </div>
@@ -314,9 +316,14 @@ export default function ActivityDetailPage() {
                 {activity?.owner.name}
               </p>
             </div>
-            <button className="text-[13px] font-semibold text-[#64748b] hover:text-[#1e293b] transition-colors shrink-0">
-              View Profile
-            </button>
+            {!isHost && (
+              <button
+                onClick={() => router.push(`/profile/${activity?.owner._id}`)}
+                className="text-[13px] font-semibold text-[#64748b] hover:text-[#1e293b] transition-colors shrink-0"
+              >
+                View Profile
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -325,13 +332,8 @@ export default function ActivityDetailPage() {
 }
 
 /* ── Mobile activity content ── */
-function ActivityContent({
-  isHost,
-  attendees,
-}: {
-  isHost: boolean;
-  attendees: Attendee[];
-}) {
+function ActivityContent({ attendees }: { attendees: Attendee[] }) {
+  const router = useRouter();
   return (
     <div>
       {/* Hero image */}
@@ -412,13 +414,19 @@ function ActivityContent({
           <h3 className="text-[18px] font-bold text-[#1e293b]">
             Attendees ({attendees?.length})
           </h3>
-          <button className="text-[13px] font-semibold text-[#64748b] hover:text-[#1e293b] transition-colors">
-            View All
-          </button>
         </div>
         <div className="flex flex-wrap gap-4">
-          {attendees?.map(({ image, name }) => (
-            <div key={name} className="flex flex-col items-center gap-1 w-16">
+          {attendees?.map(({ image, name, ownerId, attendeeId }) => (
+            <button
+              key={name}
+              onClick={() =>
+                ownerId &&
+                router.push(
+                  `/profile/${ownerId}${attendeeId ? `?Id=${attendeeId}` : ""}`,
+                )
+              }
+              className="flex flex-col items-center gap-1 w-16 cursor-pointer"
+            >
               <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#e2cfb7]">
                 <Image
                   src={image}
@@ -431,7 +439,7 @@ function ActivityContent({
               <p className="text-xs font-medium text-[#475569] text-center truncate w-full">
                 {name}
               </p>
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -561,8 +569,10 @@ function HostActions({
                     updateAttendee(
                       { _id, status: "joined" },
                       {
-                        onSuccess: () => toast(`${name} has been approved!`, "success"),
-                        onError: () => toast("Failed to approve request.", "error"),
+                        onSuccess: () =>
+                          toast(`${name} has been approved!`, "success"),
+                        onError: () =>
+                          toast("Failed to approve request.", "error"),
                       },
                     )
                   }
@@ -580,8 +590,10 @@ function HostActions({
                     updateAttendee(
                       { _id, status: "rejected" },
                       {
-                        onSuccess: () => toast(`${name} has been rejected.`, "info"),
-                        onError: () => toast("Failed to reject request.", "error"),
+                        onSuccess: () =>
+                          toast(`${name} has been rejected.`, "info"),
+                        onError: () =>
+                          toast("Failed to reject request.", "error"),
                       },
                     )
                   }

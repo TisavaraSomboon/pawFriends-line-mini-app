@@ -22,7 +22,7 @@ export default function AvatarGroup({
   members: { id: string; image?: string; name?: string; breed?: string }[];
   selectedIndex: number;
   onSelect: (i: number, id: string) => void;
-  onCreate: () => void;
+  onCreate?: () => void;
   showNameTitles?: boolean;
 }) {
   return (
@@ -61,7 +61,10 @@ export default function AvatarGroup({
             className="relative rounded-full border-4 border-dashed border-[#cbd5e1] bg-[#f7f7f6] w-12 h-12 -ml-4 z-0 flex items-center justify-center shrink-0 text-[#94a3b8] shadow-sm transition-all duration-300 scale-95 opacity-75 hover:opacity-90 hover:scale-100 hover:border-[#e2cfb7]"
             onClick={onCreate}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 20 }}
+            >
               add
             </span>
           </button>
