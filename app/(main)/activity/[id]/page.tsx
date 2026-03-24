@@ -19,15 +19,20 @@ import SpinLoader from "@/components/SpinLoader";
 import RequestModal from "@/components/RequestModal";
 import { useToast } from "@/components/Toast";
 
-const HERO =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuCXmfUp5G2wJWz4equkUn9ClUrly_jgGueg9dKc1DB71vnfbOxhh5U863IhThj58Yh6yu8yZXp9VZQjjqNke_14dUNexJm8p-jKtgxE0fKIAutsIr5GFBnNYLT3ehbUDTqkMbHPphfnLEKLbP51ybF6vIuYlDONPgJl_Jblbi1svV2cio-WBGh9oEUbLnKZCuUWTmAYjJGyNRGhdYDGMf-BWtXhT1MydFvpcuzqvBX_ExYk_wKSvPFWUE0XEU2sj7P3QdW_gRJjDbXL";
+const FALLBACK_AVATAR =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuBuzALWachO_YIj8n2rR-FLfaEYVj3LhYbo9hEjMEUR56kinTG63BRNgCKCr2UY94D71unYWxE4HXlvQwfOO6iH5U14SS6xGwZ_t0JPr2LaSWERa91zC5xmVFEP1EPhKdJ8RdW5EyNIgXqHO7I6fzubsaAgzj3wVnSlk40Xx5Gytefc7WB8s58QJOPu9U94Y_MWJX_HM2WRhjYJkQs6lMuDySUnFmGBw_Wn7XDJFOAxscL2Izuf3UznPYuNQVRv0x5nqBzhRT1i-uJ3";
 
-const size: { [key in PetSizeCategory]: string } = {
+const SIZE_LABEL: { [key in PetSizeCategory]: string } = {
   XS: "Very Small",
   SM: "Small",
   MD: "Medium",
   LG: "Large",
   XL: "Super Large",
+};
+
+const HOST_TYPE_LABEL: Record<string, { icon: string; label: string }> = {
+  personal: { icon: "🐾", label: "Personal" },
+  business: { icon: "🏪", label: "Business" },
 };
 
 export default function ActivityDetailPage() {
@@ -43,11 +48,11 @@ export default function ActivityDetailPage() {
   const [showRequests, setShowRequests] = useState(false);
 
   const requestAttendees =
-    activity?.attendees.filter((attendee) => attendee.status !== "joined") ??
-    [];
-  const onActivityEnded = () => {
-    endedActivity();
-  };
+    activity?.attendees.filter((a) => a.status !== "joined") ?? [];
+
+  useEffect(() => {
+    if (activity?.status === "ended") router.push("/");
+  }, [activity?.status, router]);
 
   const isAllPetJoined =
     !!allProfiles &&
@@ -56,23 +61,36 @@ export default function ActivityDetailPage() {
       activity?.attendees?.some((a) => a.name === pet.name),
     );
 
-  useEffect(() => {
-    if (activity?.status === "ended") {
-      router.push("/");
-    }
-  }, [activity?.status, router]);
-
   if (isFetching) return <SpinLoader title="Loading activity" />;
+
+  const actionPanel = isHost ? (
+    <HostActions
+      attendees={requestAttendees}
+      showRequests={showRequests}
+      setShowRequests={setShowRequests}
+      onEnded={() => endedActivity()}
+    />
+  ) : (
+    <UserAction
+      joinActivityId={joinActivityId}
+      setJoinActivityId={setJoinActivityId}
+      activity={activity}
+      pets={allProfiles?.pets ?? []}
+      isJoined={isAllPetJoined}
+      onAttendeeJoin={() => {
+        if (activity && allProfiles && allProfiles.pets.length > 0)
+          setJoinActivityId(activity._id);
+      }}
+    />
+  );
 
   return (
     <div className="flex flex-col flex-1 min-w-0 min-h-dvh bg-[#f7f7f6]">
       {/* Top nav bar */}
-      <div className="flex items-center justify-between px-4 md:px-8 py-3 border-b border-[rgba(225,207,183,0.2)] bg-[#f7f7f6] sticky top-0">
+      <div className="flex items-center justify-between px-4 md:px-8 py-3 border-b border-[rgba(225,207,183,0.2)] bg-[#f7f7f6] sticky top-0 z-10">
         <button
           className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[rgba(226,207,183,0.2)] transition-colors"
-          onClick={() => {
-            router.back();
-          }}
+          onClick={() => router.back()}
         >
           <span className="material-symbols-outlined text-[#1e293b]">
             arrow_back
@@ -85,54 +103,51 @@ export default function ActivityDetailPage() {
 
       {/* ── Mobile layout ── */}
       <div className="md:hidden flex-1 overflow-y-auto pb-32">
-        <ActivityContent attendees={activity?.attendees ?? []} />
-        {/* Fixed bottom action bar */}
+        <ActivityContent activity={activity} />
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-107.5 p-4 bg-[#f7f7f6]/80 backdrop-blur-md border-t border-[rgba(226,207,183,0.3)]">
-          {isHost ? (
-            <HostActions
-              attendees={requestAttendees}
-              showRequests={showRequests}
-              setShowRequests={setShowRequests}
-              onEnded={onActivityEnded}
-            />
-          ) : (
-            <UserAction
-              joinActivityId={joinActivityId}
-              setJoinActivityId={setJoinActivityId}
-              activity={activity}
-              pets={allProfiles?.pets ?? []}
-              isJoined={isAllPetJoined}
-              onAttendeeJoin={() => {
-                if (activity && allProfiles && allProfiles.pets.length > 0)
-                  setJoinActivityId(activity._id);
-              }}
-            />
-          )}
+          {actionPanel}
         </div>
       </div>
 
-      {/* ── Desktop layout: two columns ── */}
+      {/* ── Desktop layout ── */}
       <div className="hidden md:flex flex-1 gap-8 px-8 py-8 max-w-5xl mx-auto w-full items-start">
-        {/* Left column: activity details */}
+        {/* Left column */}
         <div className="flex-1 min-w-0 flex flex-col gap-0">
           {/* Hero image */}
           <div
             className="w-full h-80 rounded-2xl bg-center bg-cover bg-no-repeat mb-6"
-            style={{ backgroundImage: `url("${activity?.image ?? HERO}")` }}
+            style={{ backgroundImage: `url("${activity?.image ?? ""}")` }}
           />
 
-          {/* Title & tags */}
+          {/* Title & badges */}
           <div className="mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              {activity?.hostType && HOST_TYPE_LABEL[activity.hostType] && (
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[rgba(226,207,183,0.3)] text-[11px] font-bold text-[#64748b]">
+                  {HOST_TYPE_LABEL[activity.hostType].icon}{" "}
+                  {HOST_TYPE_LABEL[activity.hostType].label}
+                </span>
+              )}
+              {activity?.hostType === "business" && activity.autoEnd === false && (
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#f0fdf4] border border-green-200 text-[11px] font-bold text-green-700">
+                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>
+                    schedule
+                  </span>
+                  Manual End
+                </span>
+              )}
+            </div>
             <h1 className="text-3xl font-bold text-[#1e293b] tracking-tight mb-3">
               {activity?.title}
             </h1>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {activity?.sizes.map((key) => (
-                <div key={key} className="flex flex-wrap gap-2">
-                  <span className="bg-[rgba(226,207,183,0.4)] text-[#334155] px-3 py-1 rounded-full text-[8px] font-semibold uppercase tracking-wider">
-                    {`${size[key]} Dogs`}
-                  </span>
-                </div>
+                <span
+                  key={key}
+                  className="bg-[rgba(226,207,183,0.4)] text-[#334155] px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider"
+                >
+                  {SIZE_LABEL[key]} Dogs
+                </span>
               ))}
             </div>
           </div>
@@ -146,17 +161,8 @@ export default function ActivityDetailPage() {
                 </span>
               </div>
               <div className="flex-1">
-                <p className="text-[15px] font-semibold text-[#1e293b] text-ellipsis overflow-hidden whitespace-nowrap w-60">
+                <p className="text-[15px] font-semibold text-[#1e293b] truncate">
                   {activity?.locationName}
-                </p>
-                <p className="text-[13px] text-[#64748b]">
-                  {
-                    activity?.locationName.split(" ")[
-                      activity?.locationName.split(" ").length - 1
-                    ]
-                  }{" "}
-                  {/* TODO: will search for the way to get distance later */}
-                  {/* • 0.8 miles away */}
                 </p>
               </div>
               <span className="material-symbols-outlined text-[#94a3b8]">
@@ -174,8 +180,8 @@ export default function ActivityDetailPage() {
                   {dayjs(activity?.startDate).format("dddd, MMM D")}
                 </p>
                 <p className="text-[13px] text-[#64748b]">
-                  {dayjs(activity?.startDate).format("dd DD hh:mm A")} –{" "}
-                  {dayjs(activity?.endDate).format("dd DD hh:mm A")}
+                  {dayjs(activity?.startDate).format("hh:mm A")} –{" "}
+                  {dayjs(activity?.endDate).format("hh:mm A")}
                 </p>
               </div>
             </div>
@@ -191,6 +197,30 @@ export default function ActivityDetailPage() {
             </p>
           </div>
 
+          {/* Pet Requirements */}
+          {!!activity?.petRequirements?.length && (
+            <div className="bg-white rounded-2xl border border-[#f1f5f9] px-5 py-5 mb-6">
+              <h3 className="text-[17px] font-bold text-[#1e293b] mb-3">
+                Pet Requirements
+              </h3>
+              <div className="flex flex-col gap-2">
+                {activity.petRequirements.map((req) => (
+                  <div key={req} className="flex items-center gap-2.5">
+                    <span
+                      className="material-symbols-outlined text-[#e2cfb7]"
+                      style={{ fontSize: 16 }}
+                    >
+                      check_circle
+                    </span>
+                    <p className="text-[14px] font-semibold text-[#334155]">
+                      {req}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Attendees */}
           <div className="bg-white rounded-2xl border border-[#f1f5f9] px-5 py-5">
             <div className="flex items-center justify-between mb-4">
@@ -198,42 +228,13 @@ export default function ActivityDetailPage() {
                 Attendees ({activity?.attendees?.length ?? 0})
               </h3>
             </div>
-            <div className="flex flex-wrap gap-4">
-              {activity?.attendees?.map(
-                ({ image, name, ownerId, attendeeId }) => (
-                  <button
-                    key={name}
-                    onClick={() =>
-                      ownerId &&
-                      router.push(
-                        `/profile/${ownerId}${attendeeId ? `?Id=${attendeeId}` : ""}`,
-                      )
-                    }
-                    className="flex flex-col items-center gap-1 w-16 cursor-pointer"
-                  >
-                    <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#e2cfb7]">
-                      <Image
-                        src={image}
-                        alt={name}
-                        className="w-full h-full object-cover"
-                        height={256}
-                        width={256}
-                      />
-                    </div>
-                    <p className="text-xs font-medium text-[#475569] text-center truncate w-full">
-                      {name}
-                    </p>
-                  </button>
-                ),
-              )}
-            </div>
+            <AttendeeGrid attendees={activity?.attendees ?? []} />
           </div>
         </div>
 
         {/* Right column: sticky action panel */}
         <div className="w-80 shrink-0 sticky top-20">
           <div className="bg-white rounded-2xl border border-[#f1f5f9] overflow-hidden">
-            {/* Panel header */}
             <div className="px-5 py-4 border-b border-[#f1f5f9]">
               <h3 className="text-[16px] font-bold text-[#1e293b]">
                 {isHost ? "Manage Activity" : "Join this Activity"}
@@ -241,7 +242,7 @@ export default function ActivityDetailPage() {
               <p className="text-[13px] text-[#64748b] mt-0.5">
                 {isHost
                   ? "Review requests and end activity"
-                  : `${activity?.attendees.length} of ${activity?.amountOfAttendees ?? 0} spots available`}
+                  : `${activity?.attendees.length} of ${activity?.amountOfAttendees ?? 0} spots filled`}
               </p>
             </div>
 
@@ -258,8 +259,8 @@ export default function ActivityDetailPage() {
                         src={image}
                         alt={name}
                         className="w-full h-full object-cover"
-                        width={256}
-                        height={256}
+                        width={64}
+                        height={64}
                       />
                     </div>
                   ))}
@@ -273,42 +274,17 @@ export default function ActivityDetailPage() {
               </div>
             </div>
 
-            {/* Action buttons */}
-            <div className="px-5 py-5">
-              {isHost ? (
-                <HostActions
-                  attendees={requestAttendees}
-                  showRequests={showRequests}
-                  setShowRequests={setShowRequests}
-                  onEnded={onActivityEnded}
-                />
-              ) : (
-                <UserAction
-                  joinActivityId={joinActivityId}
-                  setJoinActivityId={setJoinActivityId}
-                  activity={activity}
-                  pets={allProfiles?.pets ?? []}
-                  isJoined={isAllPetJoined}
-                  onAttendeeJoin={() => {
-                    if (activity && allProfiles && allProfiles.pets.length > 0)
-                      setJoinActivityId(activity._id);
-                  }}
-                />
-              )}
-            </div>
+            <div className="px-5 py-5">{actionPanel}</div>
           </div>
 
           {/* Host info card */}
           <div className="bg-white rounded-2xl border border-[#f1f5f9] px-5 py-4 mt-4 flex items-center gap-3">
             <Image
-              src={
-                activity?.owner.image ??
-                "https://lh3.googleusercontent.com/aida-public/AB6AXuBuzALWachO_YIj8n2rR-FLfaEYVj3LhYbo9hEjMEUR56kinTG63BRNgCKCr2UY94D71unYWxE4HXlvQwfOO6iH5U14SS6xGwZ_t0JPr2LaSWERa91zC5xmVFEP1EPhKdJ8RdW5EyNIgXqHO7I6fzubsaAgzj3wVnSlk40Xx5Gytefc7WB8s58QJOPu9U94Y_MWJX_HM2WRhjYJkQs6lMuDySUnFmGBw_Wn7XDJFOAxscL2Izuf3UznPYuNQVRv0x5nqBzhRT1i-uJ3"
-              }
+              src={activity?.owner.image ?? FALLBACK_AVATAR}
               alt="Host"
               className="w-10 h-10 rounded-full object-cover shrink-0"
-              width={265}
-              height={265}
+              width={64}
+              height={64}
             />
             <div className="flex-1 min-w-0">
               <p className="text-[13px] text-[#64748b]">Hosted by</p>
@@ -331,35 +307,86 @@ export default function ActivityDetailPage() {
   );
 }
 
-/* ── Mobile activity content ── */
-function ActivityContent({ attendees }: { attendees: Attendee[] }) {
+/* ── Shared attendee grid ── */
+function AttendeeGrid({ attendees }: { attendees: Attendee[] }) {
   const router = useRouter();
+  return (
+    <div className="flex flex-wrap gap-4">
+      {attendees.map(({ image, name, ownerId, attendeeId }) => (
+        <button
+          key={name}
+          onClick={() =>
+            ownerId &&
+            router.push(`/profile/${ownerId}${attendeeId ? `?Id=${attendeeId}` : ""}`)
+          }
+          className="flex flex-col items-center gap-1 w-16"
+        >
+          <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#e2cfb7]">
+            <Image
+              src={image}
+              alt={name}
+              className="w-full h-full object-cover"
+              width={56}
+              height={56}
+            />
+          </div>
+          <p className="text-xs font-medium text-[#475569] text-center truncate w-full">
+            {name}
+          </p>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ── Mobile activity content ── */
+function ActivityContent({ activity }: { activity?: Activity }) {
   return (
     <div>
       {/* Hero image */}
-      <div
-        className="w-full min-h-72 bg-center bg-cover bg-no-repeat"
-        style={{ backgroundImage: `url("${HERO}")` }}
-      />
+      {activity?.image && (
+        <div
+          className="w-full min-h-72 bg-center bg-cover bg-no-repeat"
+          style={{ backgroundImage: `url("${activity.image}")` }}
+        />
+      )}
 
-      {/* Title & tags */}
+      {/* Title & badges */}
       <div className="px-4 py-6">
+        <div className="flex items-center gap-2 mb-2">
+          {activity?.hostType && HOST_TYPE_LABEL[activity.hostType] && (
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[rgba(226,207,183,0.3)] text-[11px] font-bold text-[#64748b]">
+              {HOST_TYPE_LABEL[activity.hostType].icon}{" "}
+              {HOST_TYPE_LABEL[activity.hostType].label}
+            </span>
+          )}
+          {activity?.hostType === "business" && activity.autoEnd === false && (
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#f0fdf4] border border-green-200 text-[11px] font-bold text-green-700">
+              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>
+                schedule
+              </span>
+              Manual End
+            </span>
+          )}
+        </div>
         <h1 className="text-3xl font-bold text-[#1e293b] tracking-tight pb-2">
-          Morning Park Zoomies
+          {activity?.title}
         </h1>
         <div className="flex flex-wrap gap-2">
-          <span className="bg-[rgba(226,207,183,0.4)] text-[#334155] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
-            Small Dogs Only
-          </span>
-          <span className="bg-[rgba(226,207,183,0.4)] text-[#334155] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
-            4/8 Spots Filled
-          </span>
+          {activity?.sizes.map((key) => (
+            <span
+              key={key}
+              className="bg-[rgba(226,207,183,0.4)] text-[#334155] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider"
+            >
+              {SIZE_LABEL[key]} Dogs
+            </span>
+          ))}
         </div>
       </div>
 
       {/* Location & date */}
-      <div className="space-y-1">
-        <div className="flex items-center gap-4 px-4 min-h-[72px] py-2 justify-between hover:bg-[rgba(226,207,183,0.08)] cursor-pointer transition-colors">
+      <div className="space-y-1 border-t border-[rgba(226,207,183,0.2)]">
+        <div className="flex items-center gap-4 px-4 py-4 justify-between hover:bg-[rgba(226,207,183,0.08)] cursor-pointer transition-colors">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-[rgba(226,207,183,0.3)] shrink-0">
               <span className="material-symbols-outlined text-[#1e293b]">
@@ -368,10 +395,7 @@ function ActivityContent({ attendees }: { attendees: Attendee[] }) {
             </div>
             <div>
               <p className="text-[15px] font-semibold text-[#1e293b]">
-                Central Park, Dog Run
-              </p>
-              <p className="text-[13px] text-[#64748b]">
-                New York, NY • 0.8 miles away
+                {activity?.locationName}
               </p>
             </div>
           </div>
@@ -380,7 +404,7 @@ function ActivityContent({ attendees }: { attendees: Attendee[] }) {
           </span>
         </div>
 
-        <div className="flex items-center gap-4 px-4 min-h-[72px] py-2">
+        <div className="flex items-center gap-4 px-4 py-4">
           <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-[rgba(226,207,183,0.3)] shrink-0">
             <span className="material-symbols-outlined text-[#1e293b]">
               calendar_today
@@ -388,60 +412,54 @@ function ActivityContent({ attendees }: { attendees: Attendee[] }) {
           </div>
           <div>
             <p className="text-[15px] font-semibold text-[#1e293b]">
-              Saturday, Oct 21
+              {dayjs(activity?.startDate).format("dddd, MMM D")}
             </p>
-            <p className="text-[13px] text-[#64748b]">09:00 AM – 10:30 AM</p>
+            <p className="text-[13px] text-[#64748b]">
+              {dayjs(activity?.startDate).format("hh:mm A")} –{" "}
+              {dayjs(activity?.endDate).format("hh:mm A")}
+            </p>
           </div>
         </div>
       </div>
 
       {/* About */}
-      <div className="px-4 py-6 border-t border-[rgba(226,207,183,0.2)] mt-4">
+      <div className="px-4 py-6 border-t border-[rgba(226,207,183,0.2)]">
         <h3 className="text-[18px] font-bold text-[#1e293b] mb-2">
           About the Activity
         </h3>
         <p className="text-[15px] text-[#475569] leading-relaxed">
-          Calling all small pups! Let&apos;s get together for some morning
-          zoomies at the enclosed dog run. Great chance for socialization in a
-          safe, size-appropriate environment. We&apos;ll grab coffee at the
-          nearby cart afterwards!
+          {activity?.description}
         </p>
       </div>
 
+      {/* Pet Requirements */}
+      {!!activity?.petRequirements?.length && (
+        <div className="px-4 py-6 border-t border-[rgba(226,207,183,0.2)]">
+          <h3 className="text-[18px] font-bold text-[#1e293b] mb-3">
+            Pet Requirements
+          </h3>
+          <div className="flex flex-col gap-2">
+            {activity.petRequirements.map((req) => (
+              <div key={req} className="flex items-center gap-2.5">
+                <span
+                  className="material-symbols-outlined text-[#e2cfb7]"
+                  style={{ fontSize: 16 }}
+                >
+                  check_circle
+                </span>
+                <p className="text-[14px] font-semibold text-[#334155]">{req}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Attendees */}
       <div className="px-4 py-6 border-t border-[rgba(226,207,183,0.2)]">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[18px] font-bold text-[#1e293b]">
-            Attendees ({attendees?.length})
-          </h3>
-        </div>
-        <div className="flex flex-wrap gap-4">
-          {attendees?.map(({ image, name, ownerId, attendeeId }) => (
-            <button
-              key={name}
-              onClick={() =>
-                ownerId &&
-                router.push(
-                  `/profile/${ownerId}${attendeeId ? `?Id=${attendeeId}` : ""}`,
-                )
-              }
-              className="flex flex-col items-center gap-1 w-16 cursor-pointer"
-            >
-              <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#e2cfb7]">
-                <Image
-                  src={image}
-                  alt={name}
-                  className="w-full h-full object-cover"
-                  width={256}
-                  height={256}
-                />
-              </div>
-              <p className="text-xs font-medium text-[#475569] text-center truncate w-full">
-                {name}
-              </p>
-            </button>
-          ))}
-        </div>
+        <h3 className="text-[18px] font-bold text-[#1e293b] mb-4">
+          Attendees ({activity?.attendees?.length ?? 0})
+        </h3>
+        <AttendeeGrid attendees={activity?.attendees ?? []} />
       </div>
     </div>
   );
@@ -469,12 +487,11 @@ function UserAction({
     <>
       <button
         onClick={onAttendeeJoin}
-        className={`w-full h-14 rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-sm 
-  active:scale-[0.98] ${
-    isJoined
-      ? "bg-white border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]"
-      : "bg-[#e2cfb7] text-[#1e293b] hover:opacity-90"
-  }`}
+        className={`w-full h-14 rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98] ${
+          isJoined
+            ? "bg-white border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]"
+            : "bg-[#e2cfb7] text-[#1e293b] hover:opacity-90"
+        }`}
       >
         <span className="material-symbols-outlined">
           {isJoined ? "check_circle" : "pets"}
@@ -502,9 +519,7 @@ function UserAction({
                 status: sizeMatch ? "joined" : "pending",
                 requestMessage:
                   message ??
-                  (sizeMatch
-                    ? undefined
-                    : "The dogs size not match with the request"),
+                  (sizeMatch ? undefined : "The dogs size not match with the request"),
               },
               { onSuccess: () => setJoinActivityId(null) },
             );

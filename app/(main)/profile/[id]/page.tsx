@@ -52,7 +52,7 @@ function PetDetailReadOnly({ pet }: { pet: Pet }) {
             </h3>
           </div>
           <div className="flex gap-2">
-            {pet.microchipVerified && (
+            {pet.microchipVerified ? (
               <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 w-fit">
                 <span
                   className="material-symbols-outlined text-blue-500"
@@ -62,6 +62,18 @@ function PetDetailReadOnly({ pet }: { pet: Pet }) {
                 </span>
                 <span className="text-[11px] font-bold text-blue-600">
                   Bangkok Verified
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 w-fit">
+                <span
+                  className="material-symbols-outlined text-red-500"
+                  style={{ fontSize: 13 }}
+                >
+                  gpp_bad
+                </span>
+                <span className="text-[11px] font-bold text-red-600">
+                  Not Verified
                 </span>
               </div>
             )}

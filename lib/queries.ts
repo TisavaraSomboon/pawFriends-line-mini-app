@@ -596,6 +596,9 @@ export type Activity = {
   status: "active" | "ended";
   hostId: string;
   attendees: Attendee[];
+  hostType?: "personal" | "business";
+  autoEnd?: boolean;
+  petRequirements?: string[];
 };
 
 export type Pet = {

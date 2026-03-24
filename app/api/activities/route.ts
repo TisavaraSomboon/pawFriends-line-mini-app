@@ -12,10 +12,10 @@ export async function GET(req: Request) {
 
   const col = await activitiesCol();
 
-  // Mark activities as "ended" if their endDate has passed
+  // Mark activities as "ended" if their endDate has passed (skip when autoEnd is false)
   // Uses $toDate to handle endDate stored as either string or Date
   await col.updateMany(
-    { status: "active", endDate: { $exists: true, $ne: null } },
+    { status: "active", endDate: { $exists: true, $ne: null }, autoEnd: { $ne: false } },
     [
       {
         $set: {
