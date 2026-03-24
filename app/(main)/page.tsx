@@ -7,6 +7,7 @@ import {
   useActivities,
   useCreateAttendees,
   useProfile,
+  useSendFeedback,
 } from "@/lib/queries";
 import { ACTIVITY_TYPE_BADGE, formatActivityTime } from "@/lib/constants";
 import Image from "next/image";
@@ -255,8 +256,81 @@ export default function HomePage() {
               </div>
             </>
           )}
+          <FeedbackSection />
         </main>
       </div>
+    </div>
+  );
+}
+
+function FeedbackSection() {
+  const [message, setMessage] = useState("");
+  const [sent, setSent] = useState(false);
+  const { mutate: sendFeedback, isPending } = useSendFeedback();
+
+  const handleSubmit = () => {
+    if (!message.trim()) return;
+    sendFeedback(message, {
+      onSuccess: () => {
+        setSent(true);
+        setMessage("");
+      },
+    });
+  };
+
+  return (
+    <div className="mt-10 mb-4 bg-white rounded-2xl border border-[#f1f5f9] px-5 py-5">
+      <div className="flex items-center gap-2 mb-1">
+        <span
+          className="material-symbols-outlined text-[#e2cfb7]"
+          style={{ fontSize: 20 }}
+        >
+          rate_review
+        </span>
+        <h3 className="text-[15px] font-bold text-[#1e293b]">
+          Send Feedback
+        </h3>
+      </div>
+      <p className="text-[12px] text-[#64748b] mb-3">
+        Help us improve PawFriends — share your thoughts, ideas, or report issues.
+      </p>
+
+      {sent ? (
+        <div className="flex items-center gap-2 py-4 justify-center">
+          <span
+            className="material-symbols-outlined text-green-500"
+            style={{ fontSize: 20 }}
+          >
+            check_circle
+          </span>
+          <p className="text-[13px] font-semibold text-green-600">
+            Thanks for your feedback!
+          </p>
+        </div>
+      ) : (
+        <>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="What's on your mind?"
+            rows={3}
+            className="w-full rounded-xl border border-[rgba(226,207,183,0.4)] bg-[#f8fafc] px-4 py-3 text-[14px] text-[#1e293b] placeholder-[#94a3b8] outline-none focus:border-[#e2cfb7] focus:ring-2 focus:ring-[rgba(226,207,183,0.2)] resize-none leading-relaxed"
+          />
+          <button
+            onClick={handleSubmit}
+            disabled={!message.trim() || isPending}
+            className="mt-3 w-full h-11 rounded-xl bg-[#1e293b] text-white text-[13px] font-bold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-30 transition-all"
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 16 }}
+            >
+              send
+            </span>
+            {isPending ? "Sending…" : "Send Feedback"}
+          </button>
+        </>
+      )}
     </div>
   );
 }

@@ -79,3 +79,16 @@ export async function attendeesCol(): Promise<Collection<AttendeesDoc>> {
   const db = await getDb();
   return db.collection<AttendeesDoc>("attendees");
 }
+
+export type FeedbackDoc = {
+  _id?: ObjectId;
+  userId?: string;
+  userName?: string;
+  message: string;
+  createdAt: Date;
+};
+
+export async function feedbackCol(): Promise<Collection<FeedbackDoc>> {
+  const db = await getDb();
+  return db.collection<FeedbackDoc>("feedback");
+}

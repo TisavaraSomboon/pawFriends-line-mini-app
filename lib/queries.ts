@@ -250,6 +250,16 @@ export function useCreateActivity() {
   });
 }
 
+export function useSendFeedback() {
+  return useMutation({
+    mutationFn: (message: string) =>
+      apiFetch("/api/feedback", {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      }),
+  });
+}
+
 export function useEndActivity(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
