@@ -120,10 +120,15 @@ export default function ProfilePage() {
     sterilizing?: boolean;
     vaccine?: boolean;
     fleaTick?: boolean;
+    microchipVerified?: boolean;
   }) => {
+    const fields = Object.keys(body).join(", ");
     updatePet(body, {
       onSuccess: () => {
-        toast(`${member.name} is now marked as sterilized.`, "success");
+        toast(`${member.name}'s ${fields} has been updated.`, "success");
+      },
+      onError: () => {
+        toast("Failed to update health status.", "error");
       },
     });
   };
@@ -185,6 +190,7 @@ export default function ProfilePage() {
               goodWith={member.goodWith}
               considerNote={member.considerNotes}
               sterilizing={member.sterilizing}
+              microchipVerified={member.microchipVerified}
               onMarkHealth={handleMarkHealth}
             />
           ) : (
@@ -268,6 +274,7 @@ export default function ProfilePage() {
                 goodWith={member.goodWith}
                 considerNote={member.considerNotes}
                 sterilizing={member.sterilizing}
+                microchipVerified={member.microchipVerified}
                 onMarkHealth={handleMarkHealth}
               />
             ) : (

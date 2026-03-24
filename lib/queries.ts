@@ -432,6 +432,37 @@ export function useUpdatePetProfile(petId: string) {
   });
 }
 
+export function useVerifyVaccine() {
+  return useMutation({
+    mutationFn: (body: { image: string; mimeType: string }) =>
+      apiFetch<{
+        vaccines: { name: string; date: string; nextDate: string | null; isCurrent: boolean }[];
+        hasCurrentVaccine: boolean;
+        summary: string;
+      }>("/api/pets/verify-vaccine", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+  });
+}
+
+export function useVerifyPetCard() {
+  return useMutation({
+    mutationFn: (body: { image: string; mimeType: string }) =>
+      apiFetch<{
+        microchipCode: string;
+        vaccine: boolean;
+        sterilizing: boolean;
+        petName: string | null;
+        breed: string | null;
+        breedEnglish: string | null;
+      }>("/api/pets/verify-card", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+  });
+}
+
 // ─── Auth ──────────────────────────────────────────────────────────────────────
 
 export function useLogin() {
@@ -583,6 +614,7 @@ export type Pet = {
   vaccine?: boolean;
   fleaTick?: boolean;
   sterilizing?: boolean;
+  microchipVerified?: boolean;
   energyLevel?: PetEnergyLevel;
   emotions?: string[];
   socialStyle?: string;
