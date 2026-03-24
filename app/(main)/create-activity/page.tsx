@@ -11,12 +11,16 @@ import { clsx } from "clsx";
 import Link from "next/link";
 import Footer from "@/components/MobileFooter";
 import CoverPhotoPicker from "@/components/CoverPhotoPicker";
+import Image from "next/image";
 import {
+  Pet,
+  PetEnergyLevel,
   PetSizeCategory,
   useAuthUser,
   useCreateActivity,
   useGeneratePhoto,
   useIncrementAiPhotoCount,
+  useProfile,
 } from "@/lib/queries";
 import { useToast } from "@/components/Toast";
 import { useRouter } from "next/navigation";
@@ -38,7 +42,7 @@ type DaySlots = Record<string, TimeSlot[]>; // "YYYY-MM-DD" → slots
 /* ── Constants ── */
 const PERSONAL_ACTIVITY_TYPES = [
   { id: "park", icon: "🌳", label: "Park Run" },
-  { id: "playdate", icon: "🐾", label: "Playdate" },
+  { id: "love", icon: "💕", label: "Love" },
   { id: "training", icon: "🎓", label: "Training" },
   { id: "swimming", icon: "🏊", label: "Swimming" },
   { id: "hiking", icon: "🥾", label: "Hiking" },
@@ -80,6 +84,8 @@ type ActivityForm = {
   description: string;
   autoEnd: boolean;
   petRequirements: string[];
+  loveDate: string;
+  lovePetId: string;
 };
 
 /** Format a Date as "YYYY-MM-DDTHH:mm" for datetime-local inputs */
@@ -89,6 +95,68 @@ function toLocalDateTimeString(date: Date): string {
     `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
     `T${pad(date.getHours())}:${pad(date.getMinutes())}`
   );
+}
+
+function buildLovePetRequirements(pet: Pet): string[] {
+  const genetic: string[] = [];
+  genetic.push("Must not be sterilized");
+  genetic.push("Vaccine up to date");
+  genetic.push("Flea & Tick protected");
+  if (pet.breed) genetic.push(`Breed: ${pet.breed} or compatible`);
+  if (pet.size) genetic.push(`Size: ${pet.size}`);
+  if (pet.ageGroup) genetic.push(`Age group: ${pet.ageGroup}`);
+  if (pet.microchipVerified) genetic.push("Microchip verified preferred");
+
+  const personality: string[] = [];
+  if (pet.energyLevel !== undefined) {
+    const energyMap: Record<number, string> = {
+      [PetEnergyLevel.Low]: "Calm & gentle energy",
+      [PetEnergyLevel.Medium]: "Balanced energy level",
+      [PetEnergyLevel.High]: "Active & playful energy",
+      [PetEnergyLevel.VeryHigh]: "High energy & adventurous",
+    };
+    const label = energyMap[pet.energyLevel as number];
+    if (label) personality.push(label);
+  }
+  if (pet.socialStyle) personality.push(`Compatible social style: ${pet.socialStyle}`);
+  pet.emotions?.slice(0, 2).forEach((e) => personality.push(`Appreciates: ${e}`));
+  if (pet.goodWith?.includes("Dogs")) personality.push("Must be friendly with dogs");
+  if (pet.goodWith?.includes("Kids")) personality.push("Kid-friendly preferred");
+
+  return [
+    ...genetic.map((item) => `genetic:${item}`),
+    ...personality.map((item) => `personality:${item}`),
+  ];
+}
+
+function getHealthBadge(pet: Pet): {
+  icon: string;
+  label: string;
+  colorClass: string;
+} {
+  if (pet.vaccine && pet.fleaTick)
+    return {
+      icon: "verified",
+      label: "Health Verified",
+      colorClass: "text-green-600",
+    };
+  if (pet.vaccine)
+    return {
+      icon: "vaccines",
+      label: "Vaccinated",
+      colorClass: "text-blue-500",
+    };
+  if (pet.fleaTick)
+    return {
+      icon: "shield",
+      label: "Flea Protected",
+      colorClass: "text-teal-500",
+    };
+  return {
+    icon: "warning",
+    label: "Needs Update",
+    colorClass: "text-amber-500",
+  };
 }
 
 /* ── Page ── */
@@ -103,6 +171,7 @@ export default function CreateActivityPage() {
   const { toast } = useToast();
 
   const { data: user } = useAuthUser();
+  const { data: allProfiles } = useProfile();
 
   const { mutateAsync: generatePhoto } = useGeneratePhoto(
     `dog activity cover photo, ${ACTIVITY_TYPES[0].label} with dogs, outdoor setting, vibrant and inviting atmosphere. The image should prominently feature dogs having fun in a park environment, with greenery and sunlight. Always include dogs in the image.`,
@@ -135,11 +204,20 @@ export default function CreateActivityPage() {
       description: "",
       autoEnd: true,
       petRequirements: ["Vaccine", "Flea & Tick", "Microchip Verified"],
+      loveDate: (() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        const pad = (n: number) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      })(),
+      lovePetId: "",
     },
   });
 
   const hostType = useWatch({ control, name: "hostType" });
   const activityType = useWatch({ control, name: "type" });
+  const isLove = activityType === "love";
+  const lovePetId = useWatch({ control, name: "lovePetId" });
 
   if (isPending) return <SpinLoader title="Creating the activity" />;
 
@@ -163,15 +241,31 @@ export default function CreateActivityPage() {
       }
     }
 
+    // For love type, derive startDate/endDate from the single appointment date
+    if (data.type === "love") {
+      const d = data.loveDate || data.startDate.split("T")[0];
+      startDate = `${d}T09:00`;
+      endDate = `${d}T23:59`;
+    }
+
     const resolvedType =
       data.type === "custom" ? customType.trim() || "custom" : data.type;
+
+    // For love, auto-generate pet requirements from selected pet
+    let resolvedPetRequirements = petRequirements;
+    if (data.type === "love" && data.lovePetId) {
+      const pet = allProfiles?.pets.find((p) => p._id === data.lovePetId);
+      if (pet) {
+        resolvedPetRequirements = buildLovePetRequirements(pet);
+      }
+    }
 
     createActivity(
       {
         ...data,
         type: resolvedType,
         autoEnd,
-        petRequirements,
+        petRequirements: resolvedPetRequirements,
         amountOfAttendees: dogLimit,
         image: coverFile ?? selectedAiUrl ?? undefined,
         startDate: new Date(startDate),
@@ -229,13 +323,52 @@ export default function CreateActivityPage() {
     />
   );
 
+  const pets = allProfiles?.pets ?? [];
+  const selectedLovePet = pets.find((p) => p._id === lovePetId) ?? null;
+
+  const loveDateField = (
+    <Controller
+      control={control}
+      name="loveDate"
+      rules={{ required: "Appointment date is required." }}
+      render={({ field }) => (
+        <LoveDateSection
+          value={field.value}
+          onChange={field.onChange}
+          error={errors.loveDate?.message}
+        />
+      )}
+    />
+  );
+
+  const lovePetSelectorField = (
+    <Controller
+      control={control}
+      name="lovePetId"
+      rules={{ required: isLove ? "Please select a dog for matching." : false }}
+      render={({ field }) => (
+        <PetSelectorSection
+          pets={pets}
+          selectedId={field.value}
+          onChange={field.onChange}
+          error={errors.lovePetId?.message}
+        />
+      )}
+    />
+  );
+
   const submitButton = (
     <button
       type="submit"
-      className="w-full h-14 rounded-[14px] bg-[#e2cfb7] flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity mb-2 gap-4"
+      className={clsx(
+        "w-full h-14 rounded-[14px] flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity mb-2 gap-3",
+        isLove ? "bg-rose-500 text-white" : "bg-[#e2cfb7] text-[#1e293b]",
+      )}
     >
-      <span className="text-[17px] font-bold">Create Activity</span>
-      <span>🐾</span>
+      <span className="text-[17px] font-bold">
+        {isLove ? "Find My Match 💕" : "Create Activity"}
+      </span>
+      {!isLove && <span>🐾</span>}
     </button>
   );
 
@@ -330,6 +463,8 @@ export default function CreateActivityPage() {
         daySlots={daySlots}
         onDaySlotsChange={setDaySlots}
       />
+    ) : isLove ? (
+      loveDateField
     ) : (
       <DateRangeSection control={control} errors={errors} />
     );
@@ -382,10 +517,22 @@ export default function CreateActivityPage() {
   );
 
   return (
-    <div className="min-h-dvh bg-[#f7f7f6] w-full">
+    <div
+      className={clsx(
+        "min-h-dvh w-full transition-colors duration-300",
+        isLove ? "bg-rose-50" : "bg-[#f7f7f6]",
+      )}
+    >
       <div className="flex flex-col w-full">
         {/* Page header */}
-        <div className="flex items-center justify-between px-4 md:px-8 py-3 border-b border-[rgba(225,207,183,0.2)] bg-[#f7f7f6] sticky top-0 z-10">
+        <div
+          className={clsx(
+            "flex items-center justify-between px-4 md:px-8 py-3 border-b sticky top-0 z-10 transition-colors",
+            isLove
+              ? "bg-rose-50/90 border-rose-200 backdrop-blur-md"
+              : "border-[rgba(225,207,183,0.2)] bg-[#f7f7f6]",
+          )}
+        >
           <Link
             href="/"
             className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[rgba(226,207,183,0.2)] transition-colors md:hidden"
@@ -419,25 +566,39 @@ export default function CreateActivityPage() {
             {locationField}
             {dateField}
             {autoEndField}
-            {petRequirementsField}
-            <Controller
-              control={control}
-              name="sizes"
-              render={({ field }) => (
-                <DogSizeSection value={field.value} onChange={field.onChange} />
-              )}
-            />
-            {hostType === "personal" && (
-              <Controller
-                control={control}
-                name="dogLimit"
-                render={({ field }) => (
-                  <DogLimitSection
-                    value={field.value}
-                    onChange={field.onChange}
+            {isLove ? (
+              <>
+                {lovePetSelectorField}
+                {selectedLovePet && (
+                  <LovePetRequirements pet={selectedLovePet} />
+                )}
+              </>
+            ) : (
+              <>
+                {petRequirementsField}
+                <Controller
+                  control={control}
+                  name="sizes"
+                  render={({ field }) => (
+                    <DogSizeSection
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+                {hostType === "personal" && (
+                  <Controller
+                    control={control}
+                    name="dogLimit"
+                    render={({ field }) => (
+                      <DogLimitSection
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    )}
                   />
                 )}
-              />
+              </>
             )}
             {descriptionField}
             {submitButton}
@@ -448,28 +609,39 @@ export default function CreateActivityPage() {
             {/* Left col */}
             <div className="flex flex-col gap-6">
               <CoverPhotoPicker {...coverPickerProps} />
-              {hostType === "personal" && (
-                <Controller
-                  control={control}
-                  name="dogLimit"
-                  render={({ field }) => (
-                    <DogLimitSection
-                      value={field.value}
-                      onChange={field.onChange}
+              {isLove ? (
+                <>
+                  {lovePetSelectorField}
+                  {selectedLovePet && (
+                    <LovePetRequirements pet={selectedLovePet} />
+                  )}
+                </>
+              ) : (
+                <>
+                  {hostType === "personal" && (
+                    <Controller
+                      control={control}
+                      name="dogLimit"
+                      render={({ field }) => (
+                        <DogLimitSection
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      )}
                     />
                   )}
-                />
-              )}
-              <Controller
-                control={control}
-                name="sizes"
-                render={({ field }) => (
-                  <DogSizeSection
-                    value={field.value}
-                    onChange={field.onChange}
+                  <Controller
+                    control={control}
+                    name="sizes"
+                    render={({ field }) => (
+                      <DogSizeSection
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    )}
                   />
-                )}
-              />
+                </>
+              )}
             </div>
 
             {/* Right col */}
@@ -480,7 +652,7 @@ export default function CreateActivityPage() {
               {locationField}
               {dateField}
               {autoEndField}
-              {petRequirementsField}
+              {!isLove && petRequirementsField}
               {descriptionField}
               {submitButton}
             </div>
@@ -1308,6 +1480,274 @@ function DescriptionSection({
         )}
       />
       {error && <p className="text-[11px] text-red-500 mt-1 ml-0.5">{error}</p>}
+    </div>
+  );
+}
+
+/* ── LoveDateSection ── */
+function LoveDateSection({
+  value,
+  onChange,
+  error,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  error?: string;
+}) {
+  const today = (() => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  })();
+
+  return (
+    <div>
+      <label className="text-[13px] font-semibold text-rose-600 mb-2 block ml-1">
+        💕 Appointment Date <span className="text-red-400">*</span>
+      </label>
+      <div
+        className={clsx(
+          "bg-white rounded-[14px] border px-4 py-4 flex items-center gap-3",
+          error
+            ? "border-red-400"
+            : "border-rose-200 focus-within:border-rose-400 focus-within:ring-2 focus-within:ring-rose-100",
+        )}
+      >
+        <span
+          className="material-symbols-outlined text-rose-400"
+          style={{ fontSize: 20 }}
+        >
+          diagnosis
+        </span>
+        <input
+          type="date"
+          min={today}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1 text-[14px] text-[#1e293b] bg-transparent outline-none"
+        />
+      </div>
+      {error && <p className="text-[11px] text-red-500 mt-1 ml-0.5">{error}</p>}
+    </div>
+  );
+}
+
+/* ── PetSelectorSection ── */
+function PetSelectorSection({
+  pets,
+  selectedId,
+  onChange,
+  error,
+}: {
+  pets: Pet[];
+  selectedId: string;
+  onChange: (id: string) => void;
+  error?: string;
+}) {
+  if (pets.length === 0) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center">
+        <span className="material-symbols-outlined text-rose-300 text-4xl">
+          pets
+        </span>
+        <p className="text-[13px] text-rose-400 mt-2 font-medium">
+          No pets found. Add a pet profile first.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label className="text-[13px] font-semibold text-rose-600 mb-3 block ml-1">
+        🐶 Select Your Dog <span className="text-red-400">*</span>
+      </label>
+      <div className="flex flex-col gap-3">
+        {pets.map((pet) => {
+          const badge = getHealthBadge(pet);
+          const isSelected = selectedId === pet._id;
+          const isDisabled = !!pet.sterilizing;
+          return (
+            <label
+              key={pet._id}
+              className={clsx(
+                "flex items-center gap-4 rounded-xl border-2 bg-white p-4 transition-all",
+                isDisabled
+                  ? "opacity-50 cursor-not-allowed"
+                  : isSelected
+                    ? "border-rose-400 bg-rose-50/60 cursor-pointer"
+                    : "border-rose-200/40 hover:border-rose-300 cursor-pointer",
+              )}
+            >
+              {pet.image ? (
+                <Image
+                  src={pet.image}
+                  alt={pet.name ?? "Pet"}
+                  width={64}
+                  height={64}
+                  className="size-16 rounded-lg object-cover shrink-0"
+                />
+              ) : (
+                <div className="size-16 rounded-lg bg-rose-100 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[28px] text-rose-400">
+                    pets
+                  </span>
+                </div>
+              )}
+              <div className="flex flex-1 flex-col min-w-0">
+                <p className="text-[#1e293b] text-base font-bold truncate">
+                  {pet.name ?? "—"}
+                </p>
+                <p className="text-[#64748b] text-sm">
+                  {pet.breed ?? "Mixed"} • {pet.size ?? "—"}
+                </p>
+                {isDisabled ? (
+                  <p className="mt-1 text-xs font-medium text-[#94a3b8]">
+                    Already sterilized — not eligible for Love
+                  </p>
+                ) : (
+                  <div
+                    className={clsx(
+                      "mt-1 flex items-center gap-1 text-xs font-medium",
+                      badge.colorClass,
+                    )}
+                  >
+                    <span className="material-symbols-outlined text-xs leading-none">
+                      {badge.icon}
+                    </span>
+                    {badge.label}
+                  </div>
+                )}
+              </div>
+              <input
+                type="radio"
+                name="dog-selection"
+                value={pet._id}
+                checked={isSelected}
+                disabled={isDisabled}
+                onChange={() => !isDisabled && onChange(pet._id)}
+                className="size-6 shrink-0 appearance-none rounded-full border-2 border-rose-200 transition-colors"
+                style={
+                  isSelected
+                    ? {
+                        backgroundColor: "#f43f5e",
+                        borderColor: "#f43f5e",
+                        backgroundImage: `url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3ccircle cx='8' cy='8' r='3'/%3e%3c/svg%3e")`,
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "center",
+                      }
+                    : undefined
+                }
+              />
+            </label>
+          );
+        })}
+      </div>
+      {error && <p className="text-[11px] text-red-500 mt-1 ml-0.5">{error}</p>}
+    </div>
+  );
+}
+
+/* ── LovePetRequirements ── */
+function LovePetRequirementsSection({
+  title,
+  icon,
+  items,
+  chipClass,
+}: {
+  title: string;
+  icon: string;
+  items: string[];
+  chipClass: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-2">
+        <span
+          className="material-symbols-outlined text-rose-400"
+          style={{ fontSize: 16 }}
+        >
+          {icon}
+        </span>
+        <p className="text-[12px] font-bold text-rose-600 uppercase tracking-wider">
+          {title}
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {items.map((item) => (
+          <span
+            key={item}
+            className={clsx(
+              "px-3 py-1 rounded-full text-[12px] font-semibold",
+              chipClass,
+            )}
+          >
+            {item}
+          </span>
+        ))}
+        {items.length === 0 && (
+          <span className="text-[12px] text-[#94a3b8]">—</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LovePetRequirements({ pet }: { pet: Pet }) {
+  // Genetic requirements — what the partner dog must have
+  const genetic: string[] = [];
+  genetic.push("Vaccine up to date");
+  genetic.push("Flea & Tick protected");
+  if (pet.breed) genetic.push(`Breed: ${pet.breed} or compatible`);
+  if (pet.size) genetic.push(`Size: ${pet.size}`);
+  if (pet.ageGroup) genetic.push(`Age group: ${pet.ageGroup}`);
+  if (pet.microchipVerified) genetic.push("Microchip verified preferred");
+
+  // Personality requirements — compatible traits for the partner dog
+  const personality: string[] = [];
+  if (pet.energyLevel !== undefined) {
+    const energyMap: Record<number, string> = {
+      [PetEnergyLevel.Low]: "Calm & gentle energy",
+      [PetEnergyLevel.Medium]: "Balanced energy level",
+      [PetEnergyLevel.High]: "Active & playful energy",
+      [PetEnergyLevel.VeryHigh]: "High energy & adventurous",
+    };
+    const label = energyMap[pet.energyLevel as number];
+    if (label) personality.push(label);
+  }
+  if (pet.socialStyle)
+    personality.push(`Compatible social style: ${pet.socialStyle}`);
+  pet.emotions
+    ?.slice(0, 2)
+    .forEach((e) => personality.push(`Appreciates: ${e}`));
+  if (pet.goodWith?.includes("Dogs"))
+    personality.push("Must be friendly with dogs");
+  if (pet.goodWith?.includes("Kids"))
+    personality.push("Kid-friendly preferred");
+
+  return (
+    <div className="rounded-2xl border border-rose-200 bg-white p-4 flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <span className="text-lg">💝</span>
+        <p className="text-[13px] font-bold text-rose-600">
+          Match Requirements
+        </p>
+        <span className="ml-auto text-[11px] text-rose-400 bg-rose-50 px-2 py-0.5 rounded-full font-medium">
+          Auto-filled
+        </span>
+      </div>
+      <LovePetRequirementsSection
+        title="Genetic Information"
+        icon="genetics"
+        items={genetic}
+        chipClass="bg-rose-50 border border-rose-200 text-rose-700"
+      />
+      <LovePetRequirementsSection
+        title="Personality Traits"
+        icon="psychology"
+        items={personality}
+        chipClass="bg-purple-50 border border-purple-200 text-purple-700"
+      />
     </div>
   );
 }
