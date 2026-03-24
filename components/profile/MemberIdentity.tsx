@@ -22,7 +22,9 @@ export default function MemberIdentity({
         <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
           location_on
         </span>
-        <span className={`font-medium ${compact ? "text-xs" : "text-sm"}`}>
+        <span
+          className={`font-medium text-ellipsis whitespace-nowrap overflow-hidden ${compact ? "text-xs" : "text-sm"}`}
+        >
           {member.locationName}
         </span>
       </div>

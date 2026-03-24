@@ -86,7 +86,9 @@ export default function LocationAutoComplete({
                   >
                     location_on
                   </span>
-                  {p.description}
+                  <span className="text-ellipsis whitespace-nowrap overflow-hidden">
+                    {p.description}
+                  </span>
                 </button>
               </li>
             ))}

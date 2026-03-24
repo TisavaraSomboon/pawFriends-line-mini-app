@@ -97,16 +97,18 @@ export default function DogProfileDetail({
       />
 
       <div className="flex flex-col gap-4">
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-center">
           <div className="flex flex-col gap-1.5">
-            <h3 className="text-[18px] font-bold text-[#1e293b] tracking-tight">
-              <span className="round-full h-4 w-4 mr-2 rounded-full bg-[rgba(226,207,183,0.25)] border border-[rgba(226,207,183,0.5)] text-[12px] p-2">
+            <h3 className="text-[18px] font-bold text-[#1e293b] tracking-tight flex items-center">
+              <span className="round-full h-9 w-9 mr-2 rounded-full bg-[rgba(226,207,183,0.25)] border border-[rgba(226,207,183,0.5)] text-[12px] p-2">
                 🐾
-              </span>{" "}
-              {name}&apos;s Profile
+              </span>
+              <span className="text-ellipsis whitespace-nowrap overflow-hidden">
+                {name}&apos;s Profile
+              </span>
             </h3>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 justify-end">
             {microchipVerified ? (
               <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 w-fit">
                 <span
@@ -158,7 +160,7 @@ export default function DogProfileDetail({
                   >
                     heart_plus
                   </span>
-                  Not yet sterilized.
+                  No sterilized.
                 </>
               )}
             </div>

@@ -58,7 +58,9 @@ export default function HomePage() {
                   >
                     location_on
                   </span>
-                  <span>{allProfiles?.user?.locationName}</span>
+                  <span className="text-ellipsis overflow-hidden text-wrap">
+                    {allProfiles?.user?.locationName}
+                  </span>
                 </div>
               </div>
             </div>
@@ -287,12 +289,11 @@ function FeedbackSection() {
         >
           rate_review
         </span>
-        <h3 className="text-[15px] font-bold text-[#1e293b]">
-          Send Feedback
-        </h3>
+        <h3 className="text-[15px] font-bold text-[#1e293b]">Send Feedback</h3>
       </div>
       <p className="text-[12px] text-[#64748b] mb-3">
-        Help us improve PawFriends — share your thoughts, ideas, or report issues.
+        Help us improve PawFriends — share your thoughts, ideas, or report
+        issues.
       </p>
 
       {sent ? (

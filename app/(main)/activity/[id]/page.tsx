@@ -128,14 +128,18 @@ export default function ActivityDetailPage() {
                   {HOST_TYPE_LABEL[activity.hostType].label}
                 </span>
               )}
-              {activity?.hostType === "business" && activity.autoEnd === false && (
-                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#f0fdf4] border border-green-200 text-[11px] font-bold text-green-700">
-                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>
-                    schedule
+              {activity?.hostType === "business" &&
+                activity.autoEnd === false && (
+                  <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#f0fdf4] border border-green-200 text-[11px] font-bold text-green-700">
+                    <span
+                      className="material-symbols-outlined"
+                      style={{ fontSize: 12 }}
+                    >
+                      schedule
+                    </span>
+                    Manual End
                   </span>
-                  Manual End
-                </span>
-              )}
+                )}
             </div>
             <h1 className="text-3xl font-bold text-[#1e293b] tracking-tight mb-3">
               {activity?.title}
@@ -161,7 +165,7 @@ export default function ActivityDetailPage() {
                 </span>
               </div>
               <div className="flex-1">
-                <p className="text-[15px] font-semibold text-[#1e293b] truncate">
+                <p className="text-[15px] font-semibold text-[#1e293b] truncate text-ellipsis whitespace-nowrap overflow-hidden">
                   {activity?.locationName}
                 </p>
               </div>
@@ -317,7 +321,9 @@ function AttendeeGrid({ attendees }: { attendees: Attendee[] }) {
           key={name}
           onClick={() =>
             ownerId &&
-            router.push(`/profile/${ownerId}${attendeeId ? `?Id=${attendeeId}` : ""}`)
+            router.push(
+              `/profile/${ownerId}${attendeeId ? `?Id=${attendeeId}` : ""}`,
+            )
           }
           className="flex flex-col items-center gap-1 w-16"
         >
@@ -362,7 +368,10 @@ function ActivityContent({ activity }: { activity?: Activity }) {
           )}
           {activity?.hostType === "business" && activity.autoEnd === false && (
             <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#f0fdf4] border border-green-200 text-[11px] font-bold text-green-700">
-              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: 12 }}
+              >
                 schedule
               </span>
               Manual End
@@ -447,7 +456,9 @@ function ActivityContent({ activity }: { activity?: Activity }) {
                 >
                   check_circle
                 </span>
-                <p className="text-[14px] font-semibold text-[#334155]">{req}</p>
+                <p className="text-[14px] font-semibold text-[#334155]">
+                  {req}
+                </p>
               </div>
             ))}
           </div>
@@ -519,7 +530,9 @@ function UserAction({
                 status: sizeMatch ? "joined" : "pending",
                 requestMessage:
                   message ??
-                  (sizeMatch ? undefined : "The dogs size not match with the request"),
+                  (sizeMatch
+                    ? undefined
+                    : "The dogs size not match with the request"),
               },
               { onSuccess: () => setJoinActivityId(null) },
             );

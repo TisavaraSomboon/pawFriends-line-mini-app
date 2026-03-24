@@ -17,7 +17,8 @@ type Props = {
   onConfirm: (selectedId: string, message?: string) => void;
 };
 
-function getCompatibility(pet: Pet): number {
+function getCompatibility(pet?: Pet): number {
+  if (!pet) return 0;
   const factors = [!!pet.breed, !!pet.vaccine, !!pet.fleaTick];
   const score = factors.filter(Boolean).length;
   return Math.round(5 + (score / factors.length) * 93);
@@ -86,6 +87,8 @@ export default function RequestModal({
           }
         : null,
     );
+  const pct = compatibility?.score ?? getCompatibility(selectedPet);
+  const color = getCompatibilityColor(pct);
 
   if (!open) return null;
 
@@ -220,8 +223,6 @@ export default function RequestModal({
           {selectedPet &&
             compatibility &&
             (() => {
-              const pct = compatibility.score ?? getCompatibility(selectedPet);
-              const color = getCompatibilityColor(pct);
               return (
                 <div className="mx-4 mt-6 mb-6 p-6 rounded-2xl bg-white shadow-sm border border-[#e1cfb7]/10">
                   <div className="flex items-center gap-4">
@@ -317,7 +318,9 @@ export default function RequestModal({
             onClick={() =>
               selectedId && onConfirm(selectedId, message || undefined)
             }
-            disabled={isCompatibilityLoading || !compatibility}
+            disabled={
+              isCompatibilityLoading || !compatibility || (pct < 90 && !message)
+            }
             className={clsx(
               "w-full bg-[#e1cfb7] text-[#1e293b] font-bold py-4 rounded-xl shadow-lg shadow-[#e1cfb7]/20 hover:scale-[0.98] active:scale-[0.95] transition-all disabled:opacity-50 disabled:pointer-events-none",
               {

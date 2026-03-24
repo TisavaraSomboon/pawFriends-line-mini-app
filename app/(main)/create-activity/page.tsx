@@ -6,7 +6,6 @@ import {
   useWatch,
   Control,
   FieldErrors,
-  UseFormRegisterReturn,
 } from "react-hook-form";
 import { clsx } from "clsx";
 import Link from "next/link";
@@ -27,7 +26,13 @@ import dayjs from "dayjs";
 
 /* ── Types ── */
 type HostType = "personal" | "business";
-type TimeSlot = { id: string; label: string; startTime: string; endTime: string; maxDogs: number };
+type TimeSlot = {
+  id: string;
+  label: string;
+  startTime: string;
+  endTime: string;
+  maxDogs: number;
+};
 type DaySlots = Record<string, TimeSlot[]>; // "YYYY-MM-DD" → slots
 
 /* ── Constants ── */
@@ -77,6 +82,15 @@ type ActivityForm = {
   petRequirements: string[];
 };
 
+/** Format a Date as "YYYY-MM-DDTHH:mm" for datetime-local inputs */
+function toLocalDateTimeString(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
+}
+
 /* ── Page ── */
 export default function CreateActivityPage() {
   const router = useRouter();
@@ -116,8 +130,8 @@ export default function CreateActivityPage() {
       longitude: null,
       sizes: ["MD"],
       dogLimit: 8,
-      startDate: "",
-      endDate: "",
+      startDate: toLocalDateTimeString(new Date(Date.now() + 60 * 60 * 1000)),
+      endDate: toLocalDateTimeString(new Date(Date.now() + 3 * 60 * 60 * 1000)),
       description: "",
       autoEnd: true,
       petRequirements: ["Vaccine", "Flea & Tick", "Microchip Verified"],
@@ -129,7 +143,13 @@ export default function CreateActivityPage() {
 
   if (isPending) return <SpinLoader title="Creating the activity" />;
 
-  const onSubmit = ({ dogLimit, customType, autoEnd, petRequirements, ...data }: ActivityForm) => {
+  const onSubmit = ({
+    dogLimit,
+    customType,
+    autoEnd,
+    petRequirements,
+    ...data
+  }: ActivityForm) => {
     let startDate = data.startDate;
     let endDate = data.endDate;
 
@@ -144,7 +164,7 @@ export default function CreateActivityPage() {
     }
 
     const resolvedType =
-      data.type === "custom" ? (customType.trim() || "custom") : data.type;
+      data.type === "custom" ? customType.trim() || "custom" : data.type;
 
     createActivity(
       {
@@ -179,10 +199,40 @@ export default function CreateActivityPage() {
     }
   };
 
+  const titleField = (
+    <Controller
+      control={control}
+      name="title"
+      rules={{ required: "Activity title is required." }}
+      render={({ field }) => (
+        <TitleField
+          value={field.value}
+          onChange={field.onChange}
+          error={errors.title?.message}
+        />
+      )}
+    />
+  );
+
+  const descriptionField = (
+    <Controller
+      control={control}
+      name="description"
+      rules={{ required: "Description is required." }}
+      render={({ field }) => (
+        <DescriptionSection
+          value={field.value}
+          onChange={field.onChange}
+          error={errors.description?.message}
+        />
+      )}
+    />
+  );
+
   const submitButton = (
     <button
       type="submit"
-      className="h-14 rounded-[14px] bg-[#e2cfb7] flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity mb-2 gap-4"
+      className="w-full h-14 rounded-[14px] bg-[#e2cfb7] flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity mb-2 gap-4"
     >
       <span className="text-[17px] font-bold">Create Activity</span>
       <span>🐾</span>
@@ -284,15 +334,16 @@ export default function CreateActivityPage() {
       <DateRangeSection control={control} errors={errors} />
     );
 
-  const autoEndField = hostType === "business" ? (
-    <Controller
-      control={control}
-      name="autoEnd"
-      render={({ field }) => (
-        <AutoEndToggle value={field.value} onChange={field.onChange} />
-      )}
-    />
-  ) : null;
+  const autoEndField =
+    hostType === "business" ? (
+      <Controller
+        control={control}
+        name="autoEnd"
+        render={({ field }) => (
+          <AutoEndToggle value={field.value} onChange={field.onChange} />
+        )}
+      />
+    ) : null;
 
   const petRequirementsField = (
     <Controller
@@ -312,7 +363,9 @@ export default function CreateActivityPage() {
           setValue("latitude", loc.latitude);
           setValue("longitude", loc.longitude);
         }}
-        registration={register("locationName", { required: "Location is required." })}
+        registration={register("locationName", {
+          required: "Location is required.",
+        })}
         required
         error={
           errors.locationName
@@ -329,8 +382,8 @@ export default function CreateActivityPage() {
   );
 
   return (
-    <div className="flex min-h-dvh bg-[#f7f7f6] w-full">
-      <div className="flex flex-col flex-1 w-full">
+    <div className="min-h-dvh bg-[#f7f7f6] w-full">
+      <div className="flex flex-col w-full">
         {/* Page header */}
         <div className="flex items-center justify-between px-4 md:px-8 py-3 border-b border-[rgba(225,207,183,0.2)] bg-[#f7f7f6] sticky top-0 z-10">
           <Link
@@ -355,18 +408,13 @@ export default function CreateActivityPage() {
         {/* Form */}
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="flex-1 overflow-y-auto pb-24 md:pb-8 w-full"
+          className="pb-28 md:pb-8 w-full"
         >
           {/* ── Mobile layout ── */}
           <div className="md:hidden px-4 pt-5 flex flex-col gap-5">
             {hostTypeField}
             <CoverPhotoPicker {...coverPickerProps} />
-            <TitleField
-              registration={register("title", {
-                required: "Activity title is required.",
-              })}
-              error={errors.title?.message}
-            />
+            {titleField}
             {activityTypeField}
             {locationField}
             {dateField}
@@ -379,19 +427,19 @@ export default function CreateActivityPage() {
                 <DogSizeSection value={field.value} onChange={field.onChange} />
               )}
             />
-            <Controller
-              control={control}
-              name="dogLimit"
-              render={({ field }) => (
-                <DogLimitSection value={field.value} onChange={field.onChange} />
-              )}
-            />
-            <DescriptionSection
-              registration={register("description", {
-                required: "Description is required.",
-              })}
-              error={errors.description?.message}
-            />
+            {hostType === "personal" && (
+              <Controller
+                control={control}
+                name="dogLimit"
+                render={({ field }) => (
+                  <DogLimitSection
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            )}
+            {descriptionField}
             {submitButton}
           </div>
 
@@ -400,18 +448,26 @@ export default function CreateActivityPage() {
             {/* Left col */}
             <div className="flex flex-col gap-6">
               <CoverPhotoPicker {...coverPickerProps} />
-              <Controller
-                control={control}
-                name="dogLimit"
-                render={({ field }) => (
-                  <DogLimitSection value={field.value} onChange={field.onChange} />
-                )}
-              />
+              {hostType === "personal" && (
+                <Controller
+                  control={control}
+                  name="dogLimit"
+                  render={({ field }) => (
+                    <DogLimitSection
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              )}
               <Controller
                 control={control}
                 name="sizes"
                 render={({ field }) => (
-                  <DogSizeSection value={field.value} onChange={field.onChange} />
+                  <DogSizeSection
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
                 )}
               />
             </div>
@@ -419,23 +475,13 @@ export default function CreateActivityPage() {
             {/* Right col */}
             <div className="flex flex-col gap-6">
               {hostTypeField}
-              <TitleField
-                registration={register("title", {
-                  required: "Activity title is required.",
-                })}
-                error={errors.title?.message}
-              />
+              {titleField}
               {activityTypeField}
               {locationField}
               {dateField}
               {autoEndField}
               {petRequirementsField}
-              <DescriptionSection
-                registration={register("description", {
-                  required: "Description is required.",
-                })}
-                error={errors.description?.message}
-              />
+              {descriptionField}
               {submitButton}
             </div>
           </div>
@@ -454,10 +500,21 @@ function HostTypeSection({
   value: HostType;
   onChange: (v: HostType) => void;
 }) {
-  const options: { id: HostType; icon: string; label: string; desc: string }[] = [
-    { id: "personal", icon: "🐾", label: "Personal", desc: "Free activities & events" },
-    { id: "business", icon: "🏪", label: "Business", desc: "Dog services & venues" },
-  ];
+  const options: { id: HostType; icon: string; label: string; desc: string }[] =
+    [
+      {
+        id: "personal",
+        icon: "🐾",
+        label: "Personal",
+        desc: "Free activities & events",
+      },
+      {
+        id: "business",
+        icon: "🏪",
+        label: "Business",
+        desc: "Dog services & venues",
+      },
+    ];
 
   return (
     <div>
@@ -546,10 +603,12 @@ function ActivityTypeSection({
 
 /* ── TitleField ── */
 function TitleField({
-  registration,
+  value,
+  onChange,
   error,
 }: {
-  registration: UseFormRegisterReturn;
+  value: string;
+  onChange: (v: string) => void;
   error?: string;
 }) {
   return (
@@ -560,11 +619,12 @@ function TitleField({
       <input
         type="text"
         placeholder="e.g. Morning run at Lumphini Park"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         className={clsx(
           inputClass,
           error && "border-red-400 focus:border-red-400 focus:ring-red-100",
         )}
-        {...registration}
       />
       {error && <p className="text-[11px] text-red-500 mt-1 ml-0.5">{error}</p>}
     </div>
@@ -613,6 +673,7 @@ function DateRangeSection({
               render={({ field }) => (
                 <input
                   type="datetime-local"
+                  min={toLocalDateTimeString(new Date())}
                   className="w-full text-[14px] text-[#1e293b] bg-transparent outline-none"
                   {...field}
                 />
@@ -681,7 +742,9 @@ function BusinessCalendar({
   const firstDayOffset = (startOfMonth.day() + 6) % 7;
   const cells: (dayjs.Dayjs | null)[] = [
     ...Array<null>(firstDayOffset).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => startOfMonth.add(i, "day")),
+    ...Array.from({ length: daysInMonth }, (_, i) =>
+      startOfMonth.add(i, "day"),
+    ),
   ];
 
   const handleAddSlot = (slot: Omit<TimeSlot, "id">) => {
@@ -695,7 +758,9 @@ function BusinessCalendar({
 
   const handleRemoveSlot = (slotId: string) => {
     if (!selectedDay) return;
-    const updated = (daySlots[selectedDay] ?? []).filter((s) => s.id !== slotId);
+    const updated = (daySlots[selectedDay] ?? []).filter(
+      (s) => s.id !== slotId,
+    );
     const next = { ...daySlots };
     if (updated.length === 0) delete next[selectedDay];
     else next[selectedDay] = updated;
@@ -719,7 +784,10 @@ function BusinessCalendar({
             disabled={month.isSame(dayjs().startOf("month"), "month")}
             className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[rgba(226,207,183,0.2)] disabled:opacity-30 transition-colors"
           >
-            <span className="material-symbols-outlined text-[#1e293b]" style={{ fontSize: 18 }}>
+            <span
+              className="material-symbols-outlined text-[#1e293b]"
+              style={{ fontSize: 18 }}
+            >
               chevron_left
             </span>
           </button>
@@ -734,7 +802,10 @@ function BusinessCalendar({
             }}
             className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[rgba(226,207,183,0.2)] transition-colors"
           >
-            <span className="material-symbols-outlined text-[#1e293b]" style={{ fontSize: 18 }}>
+            <span
+              className="material-symbols-outlined text-[#1e293b]"
+              style={{ fontSize: 18 }}
+            >
               chevron_right
             </span>
           </button>
@@ -770,7 +841,10 @@ function BusinessCalendar({
                   isPast && "opacity-30 cursor-not-allowed",
                   isSelected && "bg-[#1e293b]",
                   !isSelected && hasSlots && "bg-[rgba(226,207,183,0.35)]",
-                  !isSelected && !hasSlots && !isPast && "hover:bg-[rgba(226,207,183,0.15)]",
+                  !isSelected &&
+                    !hasSlots &&
+                    !isPast &&
+                    "hover:bg-[rgba(226,207,183,0.15)]",
                 )}
               >
                 <p
@@ -866,7 +940,9 @@ function SlotEditor({
               className="flex items-center justify-between bg-[#f8fafc] rounded-xl px-3 py-2.5 border border-[#f1f5f9]"
             >
               <div>
-                <p className="text-[13px] font-bold text-[#1e293b]">{slot.label}</p>
+                <p className="text-[13px] font-bold text-[#1e293b]">
+                  {slot.label}
+                </p>
                 <p className="text-[11px] text-[#64748b]">
                   {slot.startTime} – {slot.endTime} · max {slot.maxDogs} dogs
                 </p>
@@ -1029,7 +1105,9 @@ function PetRequirementsSection({
                 >
                   check_circle
                 </span>
-                <p className="text-[13px] font-semibold text-[#1e293b]">{req}</p>
+                <p className="text-[13px] font-semibold text-[#1e293b]">
+                  {req}
+                </p>
               </div>
               <button
                 type="button"
@@ -1204,10 +1282,12 @@ function DogLimitSection({
 
 /* ── DescriptionSection ── */
 function DescriptionSection({
-  registration,
+  value,
+  onChange,
   error,
 }: {
-  registration: UseFormRegisterReturn;
+  value: string;
+  onChange: (v: string) => void;
   error?: string;
 }) {
   return (
@@ -1218,17 +1298,16 @@ function DescriptionSection({
       <textarea
         placeholder="Describe the activity, location details, and what to bring..."
         rows={4}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         className={clsx(
           "w-full rounded-2xl border bg-white px-4 py-3 text-[15px] text-[#1e293b] placeholder-[#94a3b8] outline-none focus:ring-2 resize-none leading-relaxed",
           error
             ? "border-red-400 focus:border-red-400 focus:ring-red-100"
             : "border-[rgba(226,207,183,0.4)] focus:border-[#e1cfb7] focus:ring-[rgba(226,207,183,0.3)]",
         )}
-        {...registration}
       />
-      {error && (
-        <p className="text-[11px] text-red-500 mt-1 ml-0.5">{error}</p>
-      )}
+      {error && <p className="text-[11px] text-red-500 mt-1 ml-0.5">{error}</p>}
     </div>
   );
 }
