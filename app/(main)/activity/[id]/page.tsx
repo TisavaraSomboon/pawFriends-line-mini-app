@@ -292,7 +292,7 @@ export default function ActivityDetailPage() {
         </div>
         <div
           className={clsx(
-            "fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-107.5 p-4 backdrop-blur-md border-t",
+            "fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-107.5 p-4 backdrop-blur-md border-t",
             isLove
               ? "bg-rose-50/80 border-rose-200/40"
               : "bg-[#f7f7f6]/80 border-[rgba(226,207,183,0.3)]",
@@ -396,7 +396,7 @@ export default function ActivityDetailPage() {
                 </span>
               </div>
               <div className="flex-1">
-                <p className="text-[15px] font-semibold text-[#1e293b] truncate text-ellipsis whitespace-nowrap overflow-hidden">
+                <p className="text-[15px] font-semibold text-[#1e293b] truncate text-ellipsis whitespace-nowrap overflow-hidden w-80">
                   {activity?.locationName}
                 </p>
               </div>
@@ -748,7 +748,7 @@ function ActivityContent({
               </span>
             </div>
             <div>
-              <p className="text-[15px] font-semibold text-[#1e293b]">
+              <p className="text-[15px] font-semibold text-[#1e293b] text-ellipsis whitespace-nowrap overflow-hidden w-60">
                 {activity?.locationName}
               </p>
             </div>
