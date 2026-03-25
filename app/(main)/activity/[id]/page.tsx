@@ -19,6 +19,7 @@ import SpinLoader from "@/components/SpinLoader";
 import RequestModal from "@/components/RequestModal";
 import { useToast } from "@/components/Toast";
 import clsx from "clsx";
+import Tooltip from "@/components/Tooltip";
 
 const FALLBACK_AVATAR =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuBuzALWachO_YIj8n2rR-FLfaEYVj3LhYbo9hEjMEUR56kinTG63BRNgCKCr2UY94D71unYWxE4HXlvQwfOO6iH5U14SS6xGwZ_t0JPr2LaSWERa91zC5xmVFEP1EPhKdJ8RdW5EyNIgXqHO7I6fzubsaAgzj3wVnSlk40Xx5Gytefc7WB8s58QJOPu9U94Y_MWJX_HM2WRhjYJkQs6lMuDySUnFmGBw_Wn7XDJFOAxscL2Izuf3UznPYuNQVRv0x5nqBzhRT1i-uJ3";
@@ -138,6 +139,7 @@ export default function ActivityDetailPage() {
       pets={allProfiles?.pets ?? []}
       isJoined={isAllPetJoined}
       isLove={isLove}
+      isDisable={!activity || !allProfiles || allProfiles.pets.length <= 0}
       onAttendeeJoin={() => {
         if (activity && allProfiles && allProfiles.pets.length > 0)
           setJoinActivityId(activity._id);
@@ -817,6 +819,7 @@ function UserAction({
   pets,
   isJoined,
   isLove,
+  isDisable,
   setJoinActivityId,
   onAttendeeJoin,
 }: {
@@ -825,6 +828,7 @@ function UserAction({
   pets: Pet[];
   isJoined: boolean;
   isLove?: boolean;
+  isDisable?: boolean;
   setJoinActivityId: (open: string | null) => void;
   onAttendeeJoin: () => void;
 }) {
@@ -832,30 +836,40 @@ function UserAction({
 
   return (
     <>
-      <button
-        onClick={onAttendeeJoin}
-        className={clsx(
-          "w-full h-14 rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98]",
-          isJoined
-            ? isLove
-              ? "bg-white border-2 border-rose-300 text-rose-500 hover:bg-rose-50"
-              : "bg-white border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]"
-            : isLove
-              ? "bg-rose-500 text-white hover:bg-rose-600"
-              : "bg-[#e2cfb7] text-[#1e293b] hover:opacity-90",
-        )}
+      <Tooltip
+        className="w-full"
+        label="You need to add at least 1 pet to join this activity."
+        isDisable={!isDisable}
       >
-        <span className="material-symbols-outlined">
-          {isJoined ? "check_circle" : isLove ? "favorite" : "pets"}
-        </span>
-        {isJoined
-          ? isLove
-            ? "Requested! 💕"
-            : "Joined!"
-          : isLove
-            ? "Request a Date 💕"
-            : "Request to Join"}
-      </button>
+        <button
+          onClick={onAttendeeJoin}
+          className={clsx(
+            "w-full h-14 rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98]",
+            {
+              "bg-white border-2 border-rose-300 text-rose-500 hover:bg-rose-50":
+                isJoined && isLove,
+              "bg-white border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]":
+                isJoined && !isLove,
+              "bg-rose-500 text-white hover:bg-rose-600": !isJoined && isLove,
+              "bg-[#e2cfb7] text-[#1e293b] hover:opacity-90":
+                !isJoined && !isLove,
+              "opacity-50 pointer-events-none": isDisable,
+            },
+          )}
+          disabled={isDisable}
+        >
+          <span className="material-symbols-outlined">
+            {isJoined ? "check_circle" : isLove ? "favorite" : "pets"}
+          </span>
+          {isJoined
+            ? isLove
+              ? "Requested! 💕"
+              : "Joined!"
+            : isLove
+              ? "Request a Date 💕"
+              : "Request to Join"}
+        </button>
+      </Tooltip>
       {activity && (
         <RequestModal
           open={!!joinActivityId}

@@ -88,17 +88,27 @@ export default function ActivityCard({
             <div className="absolute inset-0 bg-gradient-to-t from-rose-900/20 to-transparent" />
           )}
           {!isExpired && (
-            <div className={clsx(
-              "absolute top-3 right-3 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1",
-              isLove ? "bg-rose-500/90 text-white" : "bg-white/90",
-            )}>
+            <div
+              className={clsx(
+                "absolute top-3 right-3 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1",
+                isLove ? "bg-rose-500/90 text-white" : "bg-white/90",
+              )}
+            >
               <span
-                className={clsx("material-symbols-outlined", isLove ? "text-white" : "text-[#9c7f5c]")}
+                className={clsx(
+                  "material-symbols-outlined",
+                  isLove ? "text-white" : "text-[#9c7f5c]",
+                )}
                 style={{ fontSize: 16 }}
               >
                 {badgeIcon}
               </span>
-              <span className={clsx("text-xs font-bold uppercase", isLove ? "text-white" : "text-[#1e293b]")}>
+              <span
+                className={clsx(
+                  "text-xs font-bold uppercase",
+                  isLove ? "text-white" : "text-[#1e293b]",
+                )}
+              >
                 {badgeLabel}
               </span>
             </div>
@@ -106,15 +116,30 @@ export default function ActivityCard({
         </div>
 
         {/* Body */}
-        <div className={clsx("p-4 flex flex-col h-full justify-between", isLove && "bg-gradient-to-b from-white to-rose-50/40")}>
+        <div
+          className={clsx(
+            "p-4 flex flex-col h-full justify-between",
+            isLove && "bg-gradient-to-b from-white to-rose-50/40",
+          )}
+        >
           <div>
             <div className="flex justify-between items-start mb-2">
-              <h3 className={clsx("text-[17px] font-bold", isLove ? "text-rose-700" : "text-[#1e293b]")}>{title}</h3>
+              <h3
+                className={clsx(
+                  "text-[17px] font-bold",
+                  isLove ? "text-rose-700" : "text-[#1e293b]",
+                )}
+              >
+                {title}
+              </h3>
               <div className="flex -space-x-2">
                 {attendees?.map((av, i) => (
                   <div
                     key={i}
-                    className={clsx("w-6 h-6 rounded-full border-2 bg-[#e2e8f0] overflow-hidden", isLove ? "border-rose-100" : "border-white")}
+                    className={clsx(
+                      "w-6 h-6 rounded-full border-2 bg-[#e2e8f0] overflow-hidden",
+                      isLove ? "border-rose-100" : "border-white",
+                    )}
                   >
                     <Image
                       src={av.image}
@@ -126,10 +151,14 @@ export default function ActivityCard({
                   </div>
                 ))}
                 {attendees && attendees.length > 0 && (
-                  <div className={clsx(
-                    "w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold text-[#1e293b]",
-                    isLove ? "border-rose-100 bg-rose-50" : "border-white bg-[rgba(226,207,183,0.3)]",
-                  )}>
+                  <div
+                    className={clsx(
+                      "w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold text-[#1e293b]",
+                      isLove
+                        ? "border-rose-100 bg-rose-50"
+                        : "border-white bg-[rgba(226,207,183,0.3)]",
+                    )}
+                  >
                     +{extraCount}
                   </div>
                 )}
@@ -139,7 +168,10 @@ export default function ActivityCard({
             <div className="space-y-2 mb-4">
               <div className="flex items-center text-[#64748b] text-sm">
                 <span
-                  className={clsx("material-symbols-outlined mr-2", isLove && "text-rose-400")}
+                  className={clsx(
+                    "material-symbols-outlined mr-2",
+                    isLove && "text-rose-400",
+                  )}
                   style={{ fontSize: 18 }}
                 >
                   location_on
@@ -150,7 +182,10 @@ export default function ActivityCard({
               </div>
               <div className="flex items-center text-[#64748b] text-sm">
                 <span
-                  className={clsx("material-symbols-outlined mr-2", isLove && "text-rose-400")}
+                  className={clsx(
+                    "material-symbols-outlined mr-2",
+                    isLove && "text-rose-400",
+                  )}
                   style={{ fontSize: 18 }}
                 >
                   {isLove ? "calendar_today" : "schedule"}
@@ -186,10 +221,15 @@ export default function ActivityCard({
                 }}
                 className={clsx(
                   "hover:opacity-90 px-5 py-2.5 rounded-xl font-bold text-sm transition-opacity z-10 flex justify-center gap-1",
-                  isLove ? "bg-rose-500 text-white" : "bg-[#e2cfb7] text-[#1e293b]",
+                  isLove
+                    ? "bg-rose-500 text-white"
+                    : "bg-[#e2cfb7] text-[#1e293b]",
                 )}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: 18 }}
+                >
                   cards_stack
                 </span>
                 Manage
@@ -213,14 +253,22 @@ export default function ActivityCard({
                   }}
                   className={clsx(
                     "hover:opacity-90 px-5 py-2.5 rounded-xl font-bold text-sm transition-opacity z-10 flex justify-center gap-1",
-                    isLove ? "bg-rose-500 text-white" : "bg-[#e2cfb7] text-[#1e293b]",
-                    { "opacity-50 hover:opacity-50!": isDisableRequest || allPetsJoined },
+                    isLove
+                      ? "bg-rose-500 text-white"
+                      : "bg-[#e2cfb7] text-[#1e293b]",
+                    {
+                      "opacity-50 hover:opacity-50!":
+                        isDisableRequest || allPetsJoined,
+                    },
                   )}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 18 }}
+                  >
                     {isLove ? "favorite" : "cards_stack"}
                   </span>
-                  {isLove ? "Find Match" : "Request"}
+                  {isLove ? "Match" : "Request"}
                 </button>
               </Tooltip>
             )}
