@@ -18,6 +18,7 @@ import {
 import SpinLoader from "@/components/SpinLoader";
 import RequestModal from "@/components/RequestModal";
 import { useToast } from "@/components/Toast";
+import clsx from "clsx";
 
 const FALLBACK_AVATAR =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuBuzALWachO_YIj8n2rR-FLfaEYVj3LhYbo9hEjMEUR56kinTG63BRNgCKCr2UY94D71unYWxE4HXlvQwfOO6iH5U14SS6xGwZ_t0JPr2LaSWERa91zC5xmVFEP1EPhKdJ8RdW5EyNIgXqHO7I6fzubsaAgzj3wVnSlk40Xx5Gytefc7WB8s58QJOPu9U94Y_MWJX_HM2WRhjYJkQs6lMuDySUnFmGBw_Wn7XDJFOAxscL2Izuf3UznPYuNQVRv0x5nqBzhRT1i-uJ3";
@@ -35,6 +36,63 @@ const HOST_TYPE_LABEL: Record<string, { icon: string; label: string }> = {
   business: { icon: "🏪", label: "Business" },
 };
 
+/* ── helpers ── */
+function groupPetRequirements(reqs: string[]) {
+  const genetic: string[] = [];
+  const personality: string[] = [];
+  const other: string[] = [];
+  for (const req of reqs) {
+    if (req.startsWith("genetic:")) genetic.push(req.slice("genetic:".length));
+    else if (req.startsWith("personality:"))
+      personality.push(req.slice("personality:".length));
+    else other.push(req);
+  }
+  return { genetic, personality, other };
+}
+
+/* ── Love requirements display ── */
+function LoveRequirementsGroup({
+  title,
+  icon,
+  items,
+  chipClass,
+}: {
+  title: string;
+  icon: string;
+  items: string[];
+  chipClass: string;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-2">
+        <span
+          className="material-symbols-outlined text-rose-400"
+          style={{ fontSize: 15 }}
+        >
+          {icon}
+        </span>
+        <p className="text-[11px] font-bold text-rose-500 uppercase tracking-wider">
+          {title}
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {items.map((item) => (
+          <span
+            key={item}
+            className={clsx(
+              "px-3 py-1 rounded-full text-[12px] font-semibold",
+              chipClass,
+            )}
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ActivityDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
@@ -43,6 +101,7 @@ export default function ActivityDetailPage() {
   const { data: activity, isFetching } = useActivity(id);
   const { mutate: endedActivity } = useEndActivity(id);
   const isHost = allProfiles?.user?._id === activity?.owner._id;
+  const isLove = activity?.type === "love";
 
   const [joinActivityId, setJoinActivityId] = useState<string | null>(null);
   const [showRequests, setShowRequests] = useState(false);
@@ -69,6 +128,7 @@ export default function ActivityDetailPage() {
       showRequests={showRequests}
       setShowRequests={setShowRequests}
       onEnded={() => endedActivity()}
+      isLove={isLove}
     />
   ) : (
     <UserAction
@@ -77,6 +137,7 @@ export default function ActivityDetailPage() {
       activity={activity}
       pets={allProfiles?.pets ?? []}
       isJoined={isAllPetJoined}
+      isLove={isLove}
       onAttendeeJoin={() => {
         if (activity && allProfiles && allProfiles.pets.length > 0)
           setJoinActivityId(activity._id);
@@ -84,27 +145,159 @@ export default function ActivityDetailPage() {
     />
   );
 
+  /* ── Pet requirements renderer ── */
+  const petRequirementsBlock = (mobile: boolean) => {
+    if (!activity?.petRequirements?.length) return null;
+
+    if (isLove) {
+      const { genetic, personality } = groupPetRequirements(
+        activity.petRequirements,
+      );
+      return (
+        <div
+          className={
+            mobile
+              ? "px-4 py-6 border-t border-rose-100"
+              : "rounded-2xl border border-rose-200 bg-white px-5 py-5 mb-6"
+          }
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-lg">💝</span>
+            <h3
+              className={clsx(
+                "font-bold text-rose-600",
+                mobile ? "text-[18px]" : "text-[17px]",
+              )}
+            >
+              Match Requirements
+            </h3>
+          </div>
+          <div className="flex flex-col gap-4">
+            <LoveRequirementsGroup
+              title="Genetic Information"
+              icon="genetics"
+              items={genetic}
+              chipClass="bg-rose-50 border border-rose-200 text-rose-700"
+            />
+            <LoveRequirementsGroup
+              title="Personality Traits"
+              icon="psychology"
+              items={personality}
+              chipClass="bg-purple-50 border border-purple-200 text-purple-700"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={
+          mobile
+            ? "px-4 py-6 border-t border-[rgba(226,207,183,0.2)]"
+            : "bg-white rounded-2xl border border-[#f1f5f9] px-5 py-5 mb-6"
+        }
+      >
+        <h3
+          className={clsx(
+            "font-bold text-[#1e293b] mb-3",
+            mobile ? "text-[18px]" : "text-[17px]",
+          )}
+        >
+          Pet Requirements
+        </h3>
+        <div className="flex flex-col gap-2">
+          {activity.petRequirements.map((req) => (
+            <div key={req} className="flex items-center gap-2.5">
+              <span
+                className="material-symbols-outlined text-[#e2cfb7]"
+                style={{ fontSize: 16 }}
+              >
+                check_circle
+              </span>
+              <p className="text-[14px] font-semibold text-[#334155]">{req}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="flex flex-col flex-1 min-w-0 min-h-dvh bg-[#f7f7f6]">
+    <div
+      className={clsx("flex flex-col flex-1 min-w-0 min-h-dvh bg-[#f7f7f6]")}
+    >
       {/* Top nav bar */}
-      <div className="flex items-center justify-between px-4 md:px-8 py-3 border-b border-[rgba(225,207,183,0.2)] bg-[#f7f7f6] sticky top-0 z-10">
+      <div
+        className={clsx(
+          "flex items-center justify-between px-4 md:px-8 py-3 border-b sticky top-0 z-10",
+          isLove
+            ? "border-rose-200/40 bg-rose-50"
+            : "border-[rgba(225,207,183,0.2)] bg-[#f7f7f6]",
+        )}
+      >
         <button
-          className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[rgba(226,207,183,0.2)] transition-colors"
+          className={clsx(
+            "w-10 h-10 flex items-center justify-center rounded-xl transition-colors",
+            isLove ? "hover:bg-rose-100" : "hover:bg-[rgba(226,207,183,0.2)]",
+          )}
           onClick={() => router.back()}
         >
-          <span className="material-symbols-outlined text-[#1e293b]">
+          <span
+            className={clsx(
+              "material-symbols-outlined",
+              isLove ? "text-rose-500" : "text-[#1e293b]",
+            )}
+          >
             arrow_back
           </span>
         </button>
-        <h2 className="text-[17px] font-bold text-[#1e293b] md:text-xl tracking-tight text-center w-full">
-          Activity Details
+        <h2
+          className={clsx(
+            "text-[17px] font-bold md:text-xl tracking-tight text-center w-full",
+            isLove ? "text-rose-600" : "text-[#1e293b]",
+          )}
+        >
+          {isLove ? "💕 Love Match" : "Activity Details"}
         </h2>
       </div>
 
       {/* ── Mobile layout ── */}
       <div className="md:hidden flex-1 overflow-y-auto pb-32">
-        <ActivityContent activity={activity} />
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-107.5 p-4 bg-[#f7f7f6]/80 backdrop-blur-md border-t border-[rgba(226,207,183,0.3)]">
+        <ActivityContent activity={activity} isLove={isLove} />
+        {petRequirementsBlock(true)}
+        {/* Attendees mobile */}
+        <div
+          className={clsx(
+            "px-4 py-6 border-t",
+            isLove ? "border-rose-100" : "border-[rgba(226,207,183,0.2)]",
+          )}
+        >
+          <h3
+            className={clsx(
+              "text-[18px] font-bold mb-4",
+              isLove ? "text-rose-600" : "text-[#1e293b]",
+            )}
+          >
+            {isLove
+              ? "💕 Matched Pups"
+              : `Attendees (${activity?.attendees?.length ?? 0})`}
+            {isLove && (
+              <span className="text-[#94a3b8] font-normal text-[14px] ml-2">
+                ({activity?.attendees?.length ?? 0})
+              </span>
+            )}
+          </h3>
+          <AttendeeGrid attendees={activity?.attendees ?? []} isLove={isLove} />
+        </div>
+        <div
+          className={clsx(
+            "fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-107.5 p-4 backdrop-blur-md border-t",
+            isLove
+              ? "bg-rose-50/80 border-rose-200/40"
+              : "bg-[#f7f7f6]/80 border-[rgba(226,207,183,0.3)]",
+          )}
+        >
           {actionPanel}
         </div>
       </div>
@@ -115,18 +308,32 @@ export default function ActivityDetailPage() {
         <div className="flex-1 min-w-0 flex flex-col gap-0">
           {/* Hero image */}
           <div
-            className="w-full h-80 rounded-2xl bg-center bg-cover bg-no-repeat mb-6"
+            className={clsx(
+              "w-full h-80 rounded-2xl bg-center bg-cover bg-no-repeat mb-6 relative overflow-hidden",
+              isLove && "ring-2 ring-rose-200",
+            )}
             style={{ backgroundImage: `url("${activity?.image ?? ""}")` }}
-          />
+          >
+            {isLove && (
+              <div className="absolute inset-0 bg-gradient-to-t from-rose-900/30 to-transparent" />
+            )}
+          </div>
 
           {/* Title & badges */}
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-2">
-              {activity?.hostType && HOST_TYPE_LABEL[activity.hostType] && (
-                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[rgba(226,207,183,0.3)] text-[11px] font-bold text-[#64748b]">
-                  {HOST_TYPE_LABEL[activity.hostType].icon}{" "}
-                  {HOST_TYPE_LABEL[activity.hostType].label}
+              {isLove ? (
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-100 border border-rose-200 text-[11px] font-bold text-rose-600">
+                  💕 Love Match
                 </span>
+              ) : (
+                activity?.hostType &&
+                HOST_TYPE_LABEL[activity.hostType] && (
+                  <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[rgba(226,207,183,0.3)] text-[11px] font-bold text-[#64748b]">
+                    {HOST_TYPE_LABEL[activity.hostType].icon}{" "}
+                    {HOST_TYPE_LABEL[activity.hostType].label}
+                  </span>
+                )
               )}
               {activity?.hostType === "business" &&
                 activity.autoEnd === false && (
@@ -141,26 +348,50 @@ export default function ActivityDetailPage() {
                   </span>
                 )}
             </div>
-            <h1 className="text-3xl font-bold text-[#1e293b] tracking-tight mb-3">
+            <h1
+              className={clsx(
+                "text-3xl font-bold tracking-tight mb-3",
+                isLove ? "text-rose-700" : "text-[#1e293b]",
+              )}
+            >
               {activity?.title}
             </h1>
-            <div className="flex flex-wrap gap-2">
-              {activity?.sizes.map((key) => (
-                <span
-                  key={key}
-                  className="bg-[rgba(226,207,183,0.4)] text-[#334155] px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider"
-                >
-                  {SIZE_LABEL[key]} Dogs
-                </span>
-              ))}
-            </div>
+            {!isLove && (
+              <div className="flex flex-wrap gap-2">
+                {activity?.sizes.map((key) => (
+                  <span
+                    key={key}
+                    className="bg-[rgba(226,207,183,0.4)] text-[#334155] px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider"
+                  >
+                    {SIZE_LABEL[key]} Dogs
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Location & date */}
-          <div className="bg-white rounded-2xl border border-[#f1f5f9] overflow-hidden mb-6 divide-y divide-[#f1f5f9]">
+          <div
+            className={clsx(
+              "rounded-2xl overflow-hidden mb-6 divide-y",
+              isLove
+                ? "bg-white border border-rose-200 divide-rose-100"
+                : "bg-white border border-[#f1f5f9] divide-[#f1f5f9]",
+            )}
+          >
             <div className="flex items-center gap-4 px-5 py-4 hover:bg-[rgba(226,207,183,0.06)] transition-colors cursor-pointer">
-              <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-[rgba(226,207,183,0.3)] shrink-0">
-                <span className="material-symbols-outlined text-[#1e293b]">
+              <div
+                className={clsx(
+                  "w-11 h-11 flex items-center justify-center rounded-xl shrink-0",
+                  isLove ? "bg-rose-100" : "bg-[rgba(226,207,183,0.3)]",
+                )}
+              >
+                <span
+                  className={clsx(
+                    "material-symbols-outlined",
+                    isLove ? "text-rose-500" : "text-[#1e293b]",
+                  )}
+                >
                   location_on
                 </span>
               </div>
@@ -174,8 +405,18 @@ export default function ActivityDetailPage() {
               </span>
             </div>
             <div className="flex items-center gap-4 px-5 py-4">
-              <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-[rgba(226,207,183,0.3)] shrink-0">
-                <span className="material-symbols-outlined text-[#1e293b]">
+              <div
+                className={clsx(
+                  "w-11 h-11 flex items-center justify-center rounded-xl shrink-0",
+                  isLove ? "bg-rose-100" : "bg-[rgba(226,207,183,0.3)]",
+                )}
+              >
+                <span
+                  className={clsx(
+                    "material-symbols-outlined",
+                    isLove ? "text-rose-500" : "text-[#1e293b]",
+                  )}
+                >
                   calendar_today
                 </span>
               </div>
@@ -184,17 +425,30 @@ export default function ActivityDetailPage() {
                   {dayjs(activity?.startDate).format("dddd, MMM D")}
                 </p>
                 <p className="text-[13px] text-[#64748b]">
-                  {dayjs(activity?.startDate).format("hh:mm A")} –{" "}
-                  {dayjs(activity?.endDate).format("hh:mm A")}
+                  {isLove
+                    ? "All day appointment"
+                    : `${dayjs(activity?.startDate).format("hh:mm A")} – ${dayjs(activity?.endDate).format("hh:mm A")}`}
                 </p>
               </div>
             </div>
           </div>
 
           {/* About */}
-          <div className="bg-white rounded-2xl border border-[#f1f5f9] px-5 py-5 mb-6">
-            <h3 className="text-[17px] font-bold text-[#1e293b] mb-2">
-              About the Activity
+          <div
+            className={clsx(
+              "rounded-2xl px-5 py-5 mb-6",
+              isLove
+                ? "bg-white border border-rose-200"
+                : "bg-white border border-[#f1f5f9]",
+            )}
+          >
+            <h3
+              className={clsx(
+                "text-[17px] font-bold mb-2",
+                isLove ? "text-rose-600" : "text-[#1e293b]",
+              )}
+            >
+              {isLove ? "💌 About This Match" : "About the Activity"}
             </h3>
             <p className="text-[15px] text-[#475569] leading-relaxed">
               {activity?.description}
@@ -202,46 +456,70 @@ export default function ActivityDetailPage() {
           </div>
 
           {/* Pet Requirements */}
-          {!!activity?.petRequirements?.length && (
-            <div className="bg-white rounded-2xl border border-[#f1f5f9] px-5 py-5 mb-6">
-              <h3 className="text-[17px] font-bold text-[#1e293b] mb-3">
-                Pet Requirements
-              </h3>
-              <div className="flex flex-col gap-2">
-                {activity.petRequirements.map((req) => (
-                  <div key={req} className="flex items-center gap-2.5">
-                    <span
-                      className="material-symbols-outlined text-[#e2cfb7]"
-                      style={{ fontSize: 16 }}
-                    >
-                      check_circle
-                    </span>
-                    <p className="text-[14px] font-semibold text-[#334155]">
-                      {req}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {petRequirementsBlock(false)}
 
           {/* Attendees */}
-          <div className="bg-white rounded-2xl border border-[#f1f5f9] px-5 py-5">
+          <div
+            className={clsx(
+              "rounded-2xl px-5 py-5",
+              isLove
+                ? "bg-white border border-rose-200"
+                : "bg-white border border-[#f1f5f9]",
+            )}
+          >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[17px] font-bold text-[#1e293b]">
-                Attendees ({activity?.attendees?.length ?? 0})
+              <h3
+                className={clsx(
+                  "text-[17px] font-bold",
+                  isLove ? "text-rose-600" : "text-[#1e293b]",
+                )}
+              >
+                {isLove
+                  ? "💕 Matched Pups"
+                  : `Attendees (${activity?.attendees?.length ?? 0})`}
+                {isLove && (
+                  <span className="text-[#94a3b8] font-normal text-[14px] ml-2">
+                    ({activity?.attendees?.length ?? 0})
+                  </span>
+                )}
               </h3>
             </div>
-            <AttendeeGrid attendees={activity?.attendees ?? []} />
+            <AttendeeGrid
+              attendees={activity?.attendees ?? []}
+              isLove={isLove}
+            />
           </div>
         </div>
 
         {/* Right column: sticky action panel */}
         <div className="w-80 shrink-0 sticky top-20">
-          <div className="bg-white rounded-2xl border border-[#f1f5f9] overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#f1f5f9]">
-              <h3 className="text-[16px] font-bold text-[#1e293b]">
-                {isHost ? "Manage Activity" : "Join this Activity"}
+          <div
+            className={clsx(
+              "rounded-2xl overflow-hidden",
+              isLove
+                ? "bg-white border border-rose-200"
+                : "bg-white border border-[#f1f5f9]",
+            )}
+          >
+            <div
+              className={clsx(
+                "px-5 py-4 border-b",
+                isLove ? "border-rose-100" : "border-[#f1f5f9]",
+              )}
+            >
+              <h3
+                className={clsx(
+                  "text-[16px] font-bold",
+                  isLove ? "text-rose-600" : "text-[#1e293b]",
+                )}
+              >
+                {isHost
+                  ? isLove
+                    ? "💕 Manage Match"
+                    : "Manage Activity"
+                  : isLove
+                    ? "💕 Request a Date"
+                    : "Join this Activity"}
               </h3>
               <p className="text-[13px] text-[#64748b] mt-0.5">
                 {isHost
@@ -251,13 +529,21 @@ export default function ActivityDetailPage() {
             </div>
 
             {/* Attendee stack preview */}
-            <div className="px-5 py-4 border-b border-[#f1f5f9]">
+            <div
+              className={clsx(
+                "px-5 py-4 border-b",
+                isLove ? "border-rose-100" : "border-[#f1f5f9]",
+              )}
+            >
               <div className="flex items-center gap-2">
                 <div className="flex -space-x-2">
                   {activity?.attendees?.slice(0, 3).map(({ image, name }) => (
                     <div
                       key={name}
-                      className="w-8 h-8 rounded-full border-2 border-white overflow-hidden"
+                      className={clsx(
+                        "w-8 h-8 rounded-full border-2 overflow-hidden",
+                        isLove ? "border-rose-200" : "border-white",
+                      )}
                     >
                       <Image
                         src={image}
@@ -273,7 +559,7 @@ export default function ActivityDetailPage() {
                   <span className="font-bold text-[#1e293b]">
                     {activity?.attendees?.length} pups
                   </span>{" "}
-                  already joined
+                  {isLove ? "looking for love" : "already joined"}
                 </p>
               </div>
             </div>
@@ -282,7 +568,14 @@ export default function ActivityDetailPage() {
           </div>
 
           {/* Host info card */}
-          <div className="bg-white rounded-2xl border border-[#f1f5f9] px-5 py-4 mt-4 flex items-center gap-3">
+          <div
+            className={clsx(
+              "rounded-2xl px-5 py-4 mt-4 flex items-center gap-3",
+              isLove
+                ? "bg-white border border-rose-200"
+                : "bg-white border border-[#f1f5f9]",
+            )}
+          >
             <Image
               src={activity?.owner.image ?? FALLBACK_AVATAR}
               alt="Host"
@@ -291,7 +584,9 @@ export default function ActivityDetailPage() {
               height={64}
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] text-[#64748b]">Hosted by</p>
+              <p className="text-[13px] text-[#64748b]">
+                {isLove ? "Posted by" : "Hosted by"}
+              </p>
               <p className="text-[14px] font-bold text-[#1e293b] truncate">
                 {activity?.owner.name}
               </p>
@@ -312,7 +607,13 @@ export default function ActivityDetailPage() {
 }
 
 /* ── Shared attendee grid ── */
-function AttendeeGrid({ attendees }: { attendees: Attendee[] }) {
+function AttendeeGrid({
+  attendees,
+  isLove,
+}: {
+  attendees: Attendee[];
+  isLove?: boolean;
+}) {
   const router = useRouter();
   return (
     <div className="flex flex-wrap gap-4">
@@ -327,7 +628,12 @@ function AttendeeGrid({ attendees }: { attendees: Attendee[] }) {
           }
           className="flex flex-col items-center gap-1 w-16"
         >
-          <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-[#e2cfb7]">
+          <div
+            className={clsx(
+              "w-14 h-14 rounded-full overflow-hidden border-2",
+              isLove ? "border-rose-300" : "border-[#e2cfb7]",
+            )}
+          >
             <Image
               src={image}
               alt={name}
@@ -346,25 +652,42 @@ function AttendeeGrid({ attendees }: { attendees: Attendee[] }) {
 }
 
 /* ── Mobile activity content ── */
-function ActivityContent({ activity }: { activity?: Activity }) {
+function ActivityContent({
+  activity,
+  isLove,
+}: {
+  activity?: Activity;
+  isLove?: boolean;
+}) {
   return (
     <div>
       {/* Hero image */}
       {activity?.image && (
         <div
-          className="w-full min-h-72 bg-center bg-cover bg-no-repeat"
+          className="relative w-full min-h-72 bg-center bg-cover bg-no-repeat"
           style={{ backgroundImage: `url("${activity.image}")` }}
-        />
+        >
+          {isLove && (
+            <div className="absolute inset-0 bg-gradient-to-t from-rose-900/30 to-transparent" />
+          )}
+        </div>
       )}
 
       {/* Title & badges */}
       <div className="px-4 py-6">
         <div className="flex items-center gap-2 mb-2">
-          {activity?.hostType && HOST_TYPE_LABEL[activity.hostType] && (
-            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[rgba(226,207,183,0.3)] text-[11px] font-bold text-[#64748b]">
-              {HOST_TYPE_LABEL[activity.hostType].icon}{" "}
-              {HOST_TYPE_LABEL[activity.hostType].label}
+          {isLove ? (
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-100 border border-rose-200 text-[11px] font-bold text-rose-600">
+              💕 Love Match
             </span>
+          ) : (
+            activity?.hostType &&
+            HOST_TYPE_LABEL[activity.hostType] && (
+              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[rgba(226,207,183,0.3)] text-[11px] font-bold text-[#64748b]">
+                {HOST_TYPE_LABEL[activity.hostType].icon}{" "}
+                {HOST_TYPE_LABEL[activity.hostType].label}
+              </span>
+            )
           )}
           {activity?.hostType === "business" && activity.autoEnd === false && (
             <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#f0fdf4] border border-green-200 text-[11px] font-bold text-green-700">
@@ -378,27 +701,49 @@ function ActivityContent({ activity }: { activity?: Activity }) {
             </span>
           )}
         </div>
-        <h1 className="text-3xl font-bold text-[#1e293b] tracking-tight pb-2">
+        <h1
+          className={clsx(
+            "text-3xl font-bold tracking-tight pb-2",
+            isLove ? "text-rose-700" : "text-[#1e293b]",
+          )}
+        >
           {activity?.title}
         </h1>
-        <div className="flex flex-wrap gap-2">
-          {activity?.sizes.map((key) => (
-            <span
-              key={key}
-              className="bg-[rgba(226,207,183,0.4)] text-[#334155] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider"
-            >
-              {SIZE_LABEL[key]} Dogs
-            </span>
-          ))}
-        </div>
+        {!isLove && (
+          <div className="flex flex-wrap gap-2">
+            {activity?.sizes.map((key) => (
+              <span
+                key={key}
+                className="bg-[rgba(226,207,183,0.4)] text-[#334155] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider"
+              >
+                {SIZE_LABEL[key]} Dogs
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Location & date */}
-      <div className="space-y-1 border-t border-[rgba(226,207,183,0.2)]">
+      <div
+        className={clsx(
+          "space-y-1 border-t",
+          isLove ? "border-rose-100" : "border-[rgba(226,207,183,0.2)]",
+        )}
+      >
         <div className="flex items-center gap-4 px-4 py-4 justify-between hover:bg-[rgba(226,207,183,0.08)] cursor-pointer transition-colors">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-[rgba(226,207,183,0.3)] shrink-0">
-              <span className="material-symbols-outlined text-[#1e293b]">
+            <div
+              className={clsx(
+                "w-12 h-12 flex items-center justify-center rounded-xl shrink-0",
+                isLove ? "bg-rose-100" : "bg-[rgba(226,207,183,0.3)]",
+              )}
+            >
+              <span
+                className={clsx(
+                  "material-symbols-outlined",
+                  isLove ? "text-rose-500" : "text-[#1e293b]",
+                )}
+              >
                 location_on
               </span>
             </div>
@@ -414,8 +759,18 @@ function ActivityContent({ activity }: { activity?: Activity }) {
         </div>
 
         <div className="flex items-center gap-4 px-4 py-4">
-          <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-[rgba(226,207,183,0.3)] shrink-0">
-            <span className="material-symbols-outlined text-[#1e293b]">
+          <div
+            className={clsx(
+              "w-12 h-12 flex items-center justify-center rounded-xl shrink-0",
+              isLove ? "bg-rose-100" : "bg-[rgba(226,207,183,0.3)]",
+            )}
+          >
+            <span
+              className={clsx(
+                "material-symbols-outlined",
+                isLove ? "text-rose-500" : "text-[#1e293b]",
+              )}
+            >
               calendar_today
             </span>
           </div>
@@ -424,53 +779,32 @@ function ActivityContent({ activity }: { activity?: Activity }) {
               {dayjs(activity?.startDate).format("dddd, MMM D")}
             </p>
             <p className="text-[13px] text-[#64748b]">
-              {dayjs(activity?.startDate).format("hh:mm A")} –{" "}
-              {dayjs(activity?.endDate).format("hh:mm A")}
+              {isLove
+                ? "All day appointment"
+                : `${dayjs(activity?.startDate).format("hh:mm A")} – ${dayjs(activity?.endDate).format("hh:mm A")}`}
             </p>
           </div>
         </div>
       </div>
 
       {/* About */}
-      <div className="px-4 py-6 border-t border-[rgba(226,207,183,0.2)]">
-        <h3 className="text-[18px] font-bold text-[#1e293b] mb-2">
-          About the Activity
+      <div
+        className={clsx(
+          "px-4 py-6 border-t",
+          isLove ? "border-rose-100" : "border-[rgba(226,207,183,0.2)]",
+        )}
+      >
+        <h3
+          className={clsx(
+            "text-[18px] font-bold mb-2",
+            isLove ? "text-rose-600" : "text-[#1e293b]",
+          )}
+        >
+          {isLove ? "💌 About This Match" : "About the Activity"}
         </h3>
         <p className="text-[15px] text-[#475569] leading-relaxed">
           {activity?.description}
         </p>
-      </div>
-
-      {/* Pet Requirements */}
-      {!!activity?.petRequirements?.length && (
-        <div className="px-4 py-6 border-t border-[rgba(226,207,183,0.2)]">
-          <h3 className="text-[18px] font-bold text-[#1e293b] mb-3">
-            Pet Requirements
-          </h3>
-          <div className="flex flex-col gap-2">
-            {activity.petRequirements.map((req) => (
-              <div key={req} className="flex items-center gap-2.5">
-                <span
-                  className="material-symbols-outlined text-[#e2cfb7]"
-                  style={{ fontSize: 16 }}
-                >
-                  check_circle
-                </span>
-                <p className="text-[14px] font-semibold text-[#334155]">
-                  {req}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Attendees */}
-      <div className="px-4 py-6 border-t border-[rgba(226,207,183,0.2)]">
-        <h3 className="text-[18px] font-bold text-[#1e293b] mb-4">
-          Attendees ({activity?.attendees?.length ?? 0})
-        </h3>
-        <AttendeeGrid attendees={activity?.attendees ?? []} />
       </div>
     </div>
   );
@@ -482,6 +816,7 @@ function UserAction({
   activity,
   pets,
   isJoined,
+  isLove,
   setJoinActivityId,
   onAttendeeJoin,
 }: {
@@ -489,6 +824,7 @@ function UserAction({
   activity?: Activity;
   pets: Pet[];
   isJoined: boolean;
+  isLove?: boolean;
   setJoinActivityId: (open: string | null) => void;
   onAttendeeJoin: () => void;
 }) {
@@ -498,16 +834,27 @@ function UserAction({
     <>
       <button
         onClick={onAttendeeJoin}
-        className={`w-full h-14 rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98] ${
+        className={clsx(
+          "w-full h-14 rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98]",
           isJoined
-            ? "bg-white border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]"
-            : "bg-[#e2cfb7] text-[#1e293b] hover:opacity-90"
-        }`}
+            ? isLove
+              ? "bg-white border-2 border-rose-300 text-rose-500 hover:bg-rose-50"
+              : "bg-white border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]"
+            : isLove
+              ? "bg-rose-500 text-white hover:bg-rose-600"
+              : "bg-[#e2cfb7] text-[#1e293b] hover:opacity-90",
+        )}
       >
         <span className="material-symbols-outlined">
-          {isJoined ? "check_circle" : "pets"}
+          {isJoined ? "check_circle" : isLove ? "favorite" : "pets"}
         </span>
-        {isJoined ? "Joined!" : "Request to Join"}
+        {isJoined
+          ? isLove
+            ? "Requested! 💕"
+            : "Joined!"
+          : isLove
+            ? "Request a Date 💕"
+            : "Request to Join"}
       </button>
       {activity && (
         <RequestModal
@@ -550,11 +897,13 @@ function HostActions({
   showRequests,
   setShowRequests,
   onEnded,
+  isLove,
 }: {
   attendees: Attendee[];
   showRequests: boolean;
   setShowRequests: (v: boolean) => void;
   onEnded: () => void;
+  isLove?: boolean;
 }) {
   const { toast } = useToast();
   const { mutate: updateAttendee } = useUpdateAttendee();
@@ -563,7 +912,12 @@ function HostActions({
     <div className="flex flex-col gap-3">
       <button
         onClick={() => setShowRequests(!showRequests)}
-        className="w-full h-14 bg-white border-2 border-[#e2cfb7] text-[#1e293b] font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[rgba(226,207,183,0.1)] transition-all active:scale-[0.98]"
+        className={clsx(
+          "w-full h-14 bg-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]",
+          isLove
+            ? "border-2 border-rose-300 text-rose-500 hover:bg-rose-50"
+            : "border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]",
+        )}
       >
         <span className="material-symbols-outlined">person_add</span>
         {showRequests
@@ -572,15 +926,27 @@ function HostActions({
       </button>
 
       {showRequests && (
-        <div className="bg-white rounded-xl border border-[#f1f5f9] divide-y divide-[#f1f5f9] overflow-hidden">
+        <div
+          className={clsx(
+            "rounded-xl divide-y overflow-hidden",
+            isLove
+              ? "bg-white border border-rose-100 divide-rose-50"
+              : "bg-white border border-[#f1f5f9] divide-[#f1f5f9]",
+          )}
+        >
           {attendees.map(({ _id, name, requestMessage }) => (
             <div
               key={_id}
               className="flex items-center justify-between px-4 py-3 gap-3"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[rgba(226,207,183,0.4)] flex items-center justify-center text-lg">
-                  🐶
+                <div
+                  className={clsx(
+                    "w-10 h-10 rounded-full flex items-center justify-center text-lg",
+                    isLove ? "bg-rose-100" : "bg-[rgba(226,207,183,0.4)]",
+                  )}
+                >
+                  {isLove ? "🐶" : "🐶"}
                 </div>
                 <div>
                   <p className="text-[14px] font-bold text-[#1e293b]">{name}</p>
@@ -604,7 +970,12 @@ function HostActions({
                       },
                     )
                   }
-                  className="w-9 h-9 rounded-full bg-[rgba(226,207,183,0.3)] flex items-center justify-center hover:bg-[rgba(226,207,183,0.6)] transition-colors"
+                  className={clsx(
+                    "w-9 h-9 rounded-full flex items-center justify-center transition-colors",
+                    isLove
+                      ? "bg-rose-100 hover:bg-rose-200"
+                      : "bg-[rgba(226,207,183,0.3)] hover:bg-[rgba(226,207,183,0.6)]",
+                  )}
                 >
                   <span
                     className="material-symbols-outlined text-[#1e293b]"
@@ -641,11 +1012,16 @@ function HostActions({
       )}
 
       <button
-        className="w-full h-14 bg-[#1e293b] text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm active:scale-[0.98]"
+        className={clsx(
+          "w-full h-14 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm active:scale-[0.98]",
+          isLove ? "bg-rose-500" : "bg-[#1e293b]",
+        )}
         onClick={onEnded}
       >
-        <span className="material-symbols-outlined">pets</span>
-        End Activity
+        <span className="material-symbols-outlined">
+          {isLove ? "heart_broken" : "pets"}
+        </span>
+        {isLove ? "End Match" : "End Activity"}
       </button>
     </div>
   );

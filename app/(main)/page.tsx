@@ -218,6 +218,7 @@ export default function HomePage() {
                     <ActivityCard
                       key={activity._id}
                       id={activity._id}
+                      type={activity.type}
                       image={activity.image ?? ""}
                       imageAlt={activity.title}
                       badgeIcon={badge.icon}

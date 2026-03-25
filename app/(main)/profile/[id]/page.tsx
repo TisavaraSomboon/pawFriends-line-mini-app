@@ -403,7 +403,7 @@ export default function PublicProfilePage() {
           <StatsGrid stats={stats} />
         </div>
 
-        <div className="bg-slate-50 rounded-t-3xl mt-4 p-6 min-h-48">
+        <div className="bg-slate-50 rounded-t-3xl p-6 min-h-48">
           {isOwnerTab ? (
             <ActivitiesReadOnly userId={userId} />
           ) : (
