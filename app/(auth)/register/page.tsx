@@ -22,7 +22,10 @@ export default function RegisterPage() {
   const { isLoading: checkingAuth } = useRequireGuest();
 
   const [step, setStep] = useState<Step>("form");
-  const [pending, setPending] = useState<{ email: string; password: string } | null>(null);
+  const [pending, setPending] = useState<{
+    email: string;
+    password: string;
+  } | null>(null);
   const [otpError, setOtpError] = useState("");
 
   function handleFormSubmit(email: string, password: string) {
@@ -35,7 +38,8 @@ export default function RegisterPage() {
             toast("Account created! Welcome to PawFriends.", "success");
             router.push("/");
           },
-          onError: (err) => toast(err.message || "Registration failed.", "error"),
+          onError: (err) =>
+            toast(err.message || "Registration failed.", "error"),
         },
       );
       return;
@@ -62,7 +66,8 @@ export default function RegisterPage() {
               toast("Account created! Welcome to PawFriends.", "success");
               router.push("/");
             },
-            onError: (err) => toast(err.message || "Registration failed.", "error"),
+            onError: (err) =>
+              toast(err.message || "Registration failed.", "error"),
           });
         },
         onError: (err) => setOtpError(err.message || "Invalid code."),
@@ -79,7 +84,9 @@ export default function RegisterPage() {
             {isSending ? "Sending code…" : "Signing up"}
           </p>
           <p className="text-[13px] text-[#64748b] mt-1">
-            {isSending ? "Check your inbox shortly." : "Fetching your pack\u2026"}
+            {isSending
+              ? "Check your inbox shortly."
+              : "Fetching your pack\u2026"}
           </p>
         </div>
       </div>
@@ -120,7 +127,7 @@ export default function RegisterPage() {
             </div>
 
             {/* Social Buttons */}
-            <div className="flex gap-3">
+            {/* <div className="flex gap-3">
               <Link
                 href="/agents"
                 className="flex-1 h-14 rounded-[14px] border border-[#e2e8f0] bg-white flex items-center justify-center gap-2.5 shadow-sm hover:bg-gray-50 transition-colors"
@@ -135,7 +142,7 @@ export default function RegisterPage() {
                 <span className="text-lg">📱</span>
                 <span className="text-[15px] font-bold text-[#334155]">Phone</span>
               </Link>
-            </div>
+            </div> */}
           </>
         ) : (
           <OtpInput
