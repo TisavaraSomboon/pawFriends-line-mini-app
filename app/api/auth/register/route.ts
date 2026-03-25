@@ -4,6 +4,8 @@ import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
 import { validatePassword, validateEmail } from "@/lib/validation";
 
+const PASSWORD_AUTH = process.env.NEXT_PUBLIC_ENABLE_PASSWORD_AUTH === "true";
+
 export async function POST(req: Request) {
   const { email, password, ...info } = await req.json();
 
@@ -12,9 +14,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: emailError }, { status: 400 });
   }
 
-  const { valid, error } = validatePassword(password);
-  if (!valid) {
-    return NextResponse.json({ error }, { status: 400 });
+  if (PASSWORD_AUTH) {
+    const { valid, error } = validatePassword(password);
+    if (!valid) {
+      return NextResponse.json({ error }, { status: 400 });
+    }
   }
 
   const db = await getDb();

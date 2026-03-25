@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { clsx } from "clsx";
 import { validatePassword } from "@/lib/validation";
@@ -14,6 +15,7 @@ interface EmailFieldProps {
   buttonLabel?: string;
   serverError?: string;
   isPasswordValidating?: boolean;
+  hidePassword?: boolean;
 }
 
 export default function EmailField({
@@ -21,18 +23,30 @@ export default function EmailField({
   buttonLabel = "Continue with Email",
   serverError,
   isPasswordValidating = false,
+  hidePassword = false,
 }: EmailFieldProps) {
   const {
     register,
+    unregister,
     handleSubmit,
     formState: { errors },
   } = useForm<FormValues>({ mode: "onBlur" });
 
-  const submit = (data: FormValues) => onSubmit(data.email, data.password);
+  // When password is hidden, unregister it so RHF drops all validation rules.
+  useEffect(() => {
+    if (hidePassword) unregister("password");
+  }, [hidePassword, unregister]);
+
+  const submit = (data: FormValues) => {
+    // When password is hidden, derive a stable placeholder so the same email
+    // always produces the same credential (email-only / beta mode).
+    const password = hidePassword ? `__beta__${data.email}` : data.password;
+    onSubmit(data.email, password);
+  };
 
   // First field error wins; server error shows when no local errors
   const displayError =
-    errors.email?.message ?? errors.password?.message ?? serverError ?? "";
+    errors.email?.message ?? (hidePassword ? "" : errors.password?.message ?? "") ?? serverError ?? "";
 
   return (
     <>
@@ -56,27 +70,31 @@ export default function EmailField({
         )}
       />
 
-      <label className="text-[13px] font-semibold text-[#334155] mb-2 ml-1 mt-3">
-        Password
-      </label>
-      <input
-        type="password"
-        placeholder="Enter your password"
-        {...register("password", {
-          required: "Password is required.",
-          validate: isPasswordValidating
-            ? (val) => {
-                const { valid, error } = validatePassword(val);
-                return valid || error || "Invalid password.";
-              }
-            : undefined,
-        })}
-        className={clsx(
-          inputClass,
-          "mb-1",
-          errors.password && "border-red-400 focus:border-red-400 focus:ring-red-100",
-        )}
-      />
+      {!hidePassword && (
+        <>
+          <label className="text-[13px] font-semibold text-[#334155] mb-2 ml-1 mt-3">
+            Password
+          </label>
+          <input
+            type="password"
+            placeholder="Enter your password"
+            {...register("password", {
+              required: "Password is required.",
+              validate: isPasswordValidating
+                ? (val) => {
+                    const { valid, error } = validatePassword(val);
+                    return valid || error || "Invalid password.";
+                  }
+                : undefined,
+            })}
+            className={clsx(
+              inputClass,
+              "mb-1",
+              errors.password && "border-red-400 focus:border-red-400 focus:ring-red-100",
+            )}
+          />
+        </>
+      )}
 
       {displayError ? (
         <p className="text-[12px] text-red-500 mb-3 ml-1">{displayError}</p>

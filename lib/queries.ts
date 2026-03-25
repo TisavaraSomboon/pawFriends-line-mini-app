@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { validatePassword, validateEmail } from "@/lib/validation";
 import { v4 as uuidv4 } from "uuid";
+import { FLAGS } from "@/lib/flags";
 
 // ─── Username generator ────────────────────────────────────────────────────────
 // Pattern: {CleanedLocalPart}#{1000-9999}  e.g. JohnDoe#3847
@@ -556,8 +557,10 @@ export function useRegister() {
       const emailError = validateEmail(email);
       if (emailError) throw new Error(emailError);
 
-      const { valid, error } = validatePassword(password);
-      if (!valid) throw new Error(error);
+      if (FLAGS.PASSWORD_AUTH) {
+        const { valid, error } = validatePassword(password);
+        if (!valid) throw new Error(error);
+      }
 
       const defaultValue = {
         name: generateUsername(email),

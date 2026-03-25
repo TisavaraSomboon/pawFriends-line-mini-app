@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
+const PASSWORD_AUTH = process.env.NEXT_PUBLIC_ENABLE_PASSWORD_AUTH === "true";
+
 export async function POST(req: Request) {
   const { email, password } = await req.json();
 
@@ -16,12 +18,14 @@ export async function POST(req: Request) {
     );
   }
 
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) {
-    return NextResponse.json(
-      { error: "Invalid email or password" },
-      { status: 401 },
-    );
+  if (PASSWORD_AUTH) {
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      return NextResponse.json(
+        { error: "Invalid email or password" },
+        { status: 401 },
+      );
+    }
   }
 
   // Create JWT token

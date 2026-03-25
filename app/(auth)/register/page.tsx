@@ -107,6 +107,21 @@ export default function RegisterPage() {
         </p>
       </div>
 
+      {/* Email-only beta notice */}
+      {!FLAGS.PASSWORD_AUTH && (
+        <div className="mx-6 mt-4 flex items-center gap-2 px-3 py-2 rounded-xl bg-[rgba(226,207,183,0.25)] border border-[rgba(226,207,183,0.5)]">
+          <span
+            className="material-symbols-outlined text-[#c4a87a]"
+            style={{ fontSize: 16 }}
+          >
+            info
+          </span>
+          <p className="text-[12px] font-medium text-[#64748b]">
+            Beta mode — register with email only, no password required.
+          </p>
+        </div>
+      )}
+
       {/* Form / OTP */}
       <div className="px-6 pt-6 flex flex-col gap-0">
         {step === "form" || !FLAGS.OTP_VERIFICATION ? (
@@ -114,17 +129,18 @@ export default function RegisterPage() {
             <EmailField
               onSubmit={handleFormSubmit}
               serverError={undefined}
-              isPasswordValidating
+              isPasswordValidating={FLAGS.PASSWORD_AUTH}
+              hidePassword={!FLAGS.PASSWORD_AUTH}
             />
 
             {/* Divider */}
-            <div className="flex items-center gap-3 my-6">
+            {/* <div className="flex items-center gap-3 my-6">
               <div className="flex-1 h-px bg-[#e2e8f0]" />
               <span className="text-[10px] font-bold text-[#94a3b8] tracking-widest">
                 OR SIGN UP WITH
               </span>
               <div className="flex-1 h-px bg-[#e2e8f0]" />
-            </div>
+            </div> */}
 
             {/* Social Buttons */}
             {/* <div className="flex gap-3">
