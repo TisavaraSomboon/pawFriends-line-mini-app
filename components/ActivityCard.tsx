@@ -21,7 +21,6 @@ export interface ActivityCardProps {
   attendees?: Attendees[];
   extraCount: number;
   spotLeft: number | "full";
-  hostAlt: string;
   hostName: string;
   description?: string;
   startTime?: string;
@@ -212,15 +211,17 @@ export default function ActivityCard({
             </div>
 
             {/* Right: thumbnail + badge */}
-            <div className="shrink-0 relative mt-8">
-              <Image
-                src={image}
-                alt={imageAlt}
-                width={96}
-                height={96}
-                className="w-24 h-24 object-cover rounded-xl"
-              />
-            </div>
+            {image && (
+              <div className="shrink-0 relative mt-8">
+                <Image
+                  src={image}
+                  alt={imageAlt}
+                  width={96}
+                  height={96}
+                  className="w-24 h-24 object-cover rounded-xl"
+                />
+              </div>
+            )}
           </div>
 
           {/* Footer */}
