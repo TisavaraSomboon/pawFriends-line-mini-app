@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Tooltip from "./Tooltip";
+import { userProfile } from "@/lib/constants";
 
 interface Attendees {
   image: string;
@@ -17,13 +18,14 @@ export interface ActivityCardProps {
   badgeIcon: string;
   badgeLabel: string;
   title: string;
-  attendees: Attendees[];
+  attendees?: Attendees[];
   extraCount: number;
-  location: string;
-  time: string;
-  hostAvatar: string;
+  spotLeft: number | "full";
   hostAlt: string;
   hostName: string;
+  description?: string;
+  startTime?: string;
+  hostAvatar?: string;
   isOwner?: boolean;
   isExpired?: boolean;
   isDisableRequest?: boolean;
@@ -39,12 +41,12 @@ export default function ActivityCard({
   badgeIcon,
   badgeLabel,
   title,
-  attendees,
+  attendees = [],
   extraCount,
-  location,
-  time,
-  hostAvatar,
-  hostAlt,
+  spotLeft,
+  startTime,
+  hostAvatar = userProfile,
+  description,
   hostName,
   isOwner,
   isExpired,
@@ -57,14 +59,6 @@ export default function ActivityCard({
 
   return (
     <div className="relative">
-      {isExpired && (
-        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-amber-600 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
-          <span className="material-symbols-outlined" style={{ fontSize: 12 }}>
-            event_busy
-          </span>
-          Expired
-        </div>
-      )}
       <Link
         href={isExpired ? "" : `/activity/${id}`}
         className={clsx(
@@ -75,85 +69,132 @@ export default function ActivityCard({
           { "opacity-50 pointer-events-none": isExpired },
         )}
       >
-        {/* Image */}
-        <div className="relative h-48 w-full">
-          <Image
-            src={image}
-            alt={imageAlt}
-            width={1098}
-            height={1098}
-            className="w-full h-full object-cover"
-          />
-          {isLove && (
-            <div className="absolute inset-0 bg-gradient-to-t from-rose-900/20 to-transparent" />
-          )}
-          {!isExpired && (
-            <div
+        {!isExpired && (
+          <div
+            className={clsx(
+              "absolute top-4 right-4 whitespace-nowrap backdrop-blur-sm rounded-full px-2 py-0.5 flex items-center gap-1",
+              isLove ? "bg-rose-500/90 text-white" : "bg-white/90",
+            )}
+          >
+            <span
               className={clsx(
-                "absolute top-3 right-3 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1",
-                isLove ? "bg-rose-500/90 text-white" : "bg-white/90",
+                "material-symbols-outlined",
+                isLove ? "text-white" : "text-[#9c7f5c]",
+              )}
+              style={{ fontSize: 12 }}
+            >
+              {badgeIcon}
+            </span>
+            <span
+              className={clsx(
+                "text-[10px] font-bold uppercase",
+                isLove ? "text-white" : "text-[#1e293b]",
               )}
             >
-              <span
-                className={clsx(
-                  "material-symbols-outlined",
-                  isLove ? "text-white" : "text-[#9c7f5c]",
-                )}
-                style={{ fontSize: 16 }}
-              >
-                {badgeIcon}
-              </span>
-              <span
-                className={clsx(
-                  "text-xs font-bold uppercase",
-                  isLove ? "text-white" : "text-[#1e293b]",
-                )}
-              >
-                {badgeLabel}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Body */}
+              {badgeLabel}
+            </span>
+          </div>
+        )}
+        {isExpired && (
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-amber-600 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 12 }}
+            >
+              event_busy
+            </span>
+            Expired
+          </div>
+        )}
         <div
           className={clsx(
-            "p-4 flex flex-col h-full justify-between",
-            isLove && "bg-gradient-to-b from-white to-rose-50/40",
+            "p-4 flex flex-col gap-3",
+            isLove && "bg-linear-to-b from-white to-rose-50/40",
           )}
         >
-          <div>
-            <div className="flex justify-between items-start mb-2">
+          {/* Body: text left, thumbnail right */}
+          <div className="flex gap-3 items-start">
+            {/* Left: all text content */}
+            <div className="flex-1 min-w-0">
+              {/* Host row */}
+              <div className="flex gap-2 items-center mb-2">
+                <div className="w-8 h-8 rounded-full bg-[#e2cfb7] overflow-hidden relative shrink-0">
+                  <Image
+                    src={hostAvatar}
+                    alt={hostName}
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[13px] font-semibold truncate">
+                    {hostName}
+                  </span>
+                  <span className="text-[11px] text-[#94a3b8]">10 km away</span>
+                </div>
+              </div>
+
+              {/* Title */}
               <h3
                 className={clsx(
-                  "text-[17px] font-bold",
+                  "text-[15px] font-bold leading-snug mb-1.5 line-clamp-2",
                   isLove ? "text-rose-700" : "text-[#1e293b]",
                 )}
               >
                 {title}
               </h3>
-              <div className="flex -space-x-2">
-                {attendees?.map((av, i) => (
-                  <div
-                    key={i}
+
+              {/* Time + spots */}
+              <div className="flex flex-col gap-0.5 text-[#64748b] text-[11px] mb-2">
+                <div className="flex gap-1 items-center">
+                  <span
                     className={clsx(
-                      "w-6 h-6 rounded-full border-2 bg-[#e2e8f0] overflow-hidden",
-                      isLove ? "border-rose-100" : "border-white",
+                      "material-symbols-outlined",
+                      isLove && "text-rose-400",
                     )}
+                    style={{ fontSize: 12 }}
                   >
-                    <Image
-                      src={av.image}
-                      alt={av.name}
-                      className="w-full h-full object-cover rounded-full"
-                      width={1098}
-                      height={1098}
-                    />
+                    {isLove ? "calendar_today" : "schedule"}
+                  </span>
+                  <span className="truncate">{startTime}</span>
+                </div>
+                {!!spotLeft && (
+                  <div className="flex gap-1 items-center text-red-600">
+                    <span
+                      className="material-symbols-outlined"
+                      style={{ fontSize: 12 }}
+                    >
+                      family_group
+                    </span>
+                    <span>{spotLeft} spot left</span>
                   </div>
-                ))}
-                {attendees && attendees.length > 0 && (
+                )}
+              </div>
+
+              {/* Attendee avatars */}
+              {attendees.length > 0 && (
+                <div className="flex -space-x-1.5 mb-2">
+                  {attendees.map((av, i) => (
+                    <div
+                      key={i}
+                      className={clsx(
+                        "w-5 h-5 rounded-full border-2 bg-[#e2e8f0] overflow-hidden",
+                        isLove ? "border-rose-100" : "border-white",
+                      )}
+                    >
+                      <Image
+                        src={av.image}
+                        alt={av.name}
+                        className="w-full h-full object-cover rounded-full"
+                        width={40}
+                        height={40}
+                      />
+                    </div>
+                  ))}
                   <div
                     className={clsx(
-                      "w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold text-[#1e293b]",
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center text-[9px] font-bold text-[#1e293b]",
                       isLove
                         ? "border-rose-100 bg-rose-50"
                         : "border-white bg-[rgba(226,207,183,0.3)]",
@@ -161,58 +202,29 @@ export default function ActivityCard({
                   >
                     +{extraCount}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* Description */}
+              <p className="text-[12px] text-[#64748b] line-clamp-2 leading-relaxed">
+                {description ?? ""}
+              </p>
             </div>
 
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center text-[#64748b] text-sm">
-                <span
-                  className={clsx(
-                    "material-symbols-outlined mr-2",
-                    isLove && "text-rose-400",
-                  )}
-                  style={{ fontSize: 18 }}
-                >
-                  location_on
-                </span>
-                <span className="text-ellipsis whitespace-nowrap overflow-hidden">
-                  {location}
-                </span>
-              </div>
-              <div className="flex items-center text-[#64748b] text-sm">
-                <span
-                  className={clsx(
-                    "material-symbols-outlined mr-2",
-                    isLove && "text-rose-400",
-                  )}
-                  style={{ fontSize: 18 }}
-                >
-                  {isLove ? "calendar_today" : "schedule"}
-                </span>
-                <span>{isLove ? time.split("–")[0].trim() : time}</span>
-              </div>
+            {/* Right: thumbnail + badge */}
+            <div className="shrink-0 relative mt-8">
+              <Image
+                src={image}
+                alt={imageAlt}
+                width={96}
+                height={96}
+                className="w-24 h-24 object-cover rounded-xl"
+              />
             </div>
           </div>
 
+          {/* Footer */}
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              {hostAvatar && (
-                <Image
-                  src={hostAvatar}
-                  alt={hostAlt}
-                  className="w-8 h-8 rounded-full object-cover"
-                  width={256}
-                  height={256}
-                />
-              )}
-              {hostName && (
-                <p className="text-xs font-medium text-[#475569]">
-                  {isLove ? "Posted by " : "Hosted by "}
-                  <span className="font-bold text-[#1e293b]">{hostName}</span>
-                </p>
-              )}
-            </div>
             {isOwner ? (
               <button
                 onClick={(e) => {
@@ -220,7 +232,7 @@ export default function ActivityCard({
                   router.push("/profile");
                 }}
                 className={clsx(
-                  "hover:opacity-90 px-5 py-2.5 rounded-xl font-bold text-sm transition-opacity z-10 flex justify-center gap-1",
+                  "hover:opacity-90 px-5 py-2.5 rounded-xl font-bold text-sm transition-opacity z-10 flex justify-center gap-1 w-full",
                   isLove
                     ? "bg-rose-500 text-white"
                     : "bg-[#e2cfb7] text-[#1e293b]",
@@ -236,8 +248,9 @@ export default function ActivityCard({
               </button>
             ) : (
               <Tooltip
+                className="w-full"
                 label={
-                  <div className="w-30 text-wrap">
+                  <div className="text-wrap">
                     {allPetsJoined
                       ? "All your pets already joined this activity."
                       : "You need to add at least 1 pet to join this activity."}
@@ -252,7 +265,7 @@ export default function ActivityCard({
                     onJoin?.();
                   }}
                   className={clsx(
-                    "hover:opacity-90 px-5 py-2.5 rounded-xl font-bold text-sm transition-opacity z-10 flex justify-center gap-1",
+                    "hover:opacity-90 px-5 py-2.5 rounded-xl font-bold text-sm transition-opacity z-10 flex justify-center gap-1 w-full",
                     isLove
                       ? "bg-rose-500 text-white"
                       : "bg-[#e2cfb7] text-[#1e293b]",

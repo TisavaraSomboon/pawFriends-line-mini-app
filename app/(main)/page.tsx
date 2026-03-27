@@ -9,7 +9,11 @@ import {
   useProfile,
   useSendFeedback,
 } from "@/lib/queries";
-import { ACTIVITY_TYPE_BADGE, formatActivityTime } from "@/lib/constants";
+import {
+  ACTIVITY_TYPE_BADGE,
+  formatActivityTime,
+  formatStartTim,
+} from "@/lib/constants";
 import Image from "next/image";
 import SpinLoader from "@/components/SpinLoader";
 import RequestModal from "@/components/RequestModal";
@@ -35,7 +39,7 @@ export default function HomePage() {
       {/* ── Main column ── */}
       <div className="flex flex-col flex-1 min-w-0">
         {/* Mobile sticky header */}
-        <header className="md:hidden sticky top-0 z-10 bg-[#f7f7f6]/80 backdrop-blur-md px-4 pt-4 pb-2">
+        <header className="md:hidden sticky top-0 bg-[#f7f7f6]/80 backdrop-blur-md px-4 pt-4 pb-2 z-20">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[#e2cfb7] flex items-center justify-center overflow-hidden">
@@ -79,7 +83,7 @@ export default function HomePage() {
         </header>
 
         {/* Desktop top bar */}
-        <header className="hidden md:flex items-center gap-4 px-6 py-4 border-b border-[#ede8e0] bg-[#f7f7f6]/80 backdrop-blur-md sticky top-0 z-10">
+        <header className="hidden md:flex items-center gap-4 px-6 py-4 border-b border-[#ede8e0] bg-[#f7f7f6]/80 backdrop-blur-md sticky top-0 z-20">
           <div className="flex-1">
             <SearchAndFilters
               search={search}
@@ -207,7 +211,7 @@ export default function HomePage() {
                 }}
                 onCancel={() => setJoinActivityId(null)}
               />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {activities.map((activity) => {
                   const badge = ACTIVITY_TYPE_BADGE[activity.type] ?? {
                     icon: "pets",
@@ -226,14 +230,17 @@ export default function HomePage() {
                       title={activity.title}
                       attendees={activity.attendees}
                       extraCount={activity.maxDogs}
-                      location={activity.locationName}
-                      time={formatActivityTime(
-                        activity.startDate,
-                        activity.endDate,
-                      )}
-                      hostAvatar=""
-                      hostAlt=""
-                      hostName=""
+                      startTime={
+                        activity.startDate
+                          ? formatStartTim(activity.startDate)
+                          : undefined
+                      }
+                      spotLeft={
+                        activity.amountOfAttendees - activity.attendees.length
+                      }
+                      hostAvatar={activity.owner.image}
+                      hostName={activity.owner.name}
+                      description={activity.description}
                       isOwner={allProfiles?.user?._id === activity?.owner?._id}
                       isExpired={
                         !!activity.endDate &&
