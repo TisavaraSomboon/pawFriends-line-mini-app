@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Tooltip from "@/components/Tooltip";
 
 const AVATAR_SLOT_STYLES = [
   { size: "w-24 h-24", zIndex: "z-30", marginLeft: "" },
@@ -9,8 +8,6 @@ const AVATAR_SLOT_STYLES = [
   { size: "w-20 h-20", zIndex: "z-10", marginLeft: "-ml-6" },
   { size: "w-16 h-16", zIndex: "z-0", marginLeft: "-ml-5" },
 ] as const;
-
-const MAX_PACK_SIZE = 4;
 
 export default function AvatarGroup({
   members,
@@ -26,7 +23,7 @@ export default function AvatarGroup({
   showNameTitles?: boolean;
 }) {
   return (
-    <div className="flex items-end justify-center mb-5">
+    <div className="relative w-full h-full flex items-end justify-center mb-5">
       {members.map((m, i) => {
         const slot = AVATAR_SLOT_STYLES[i];
         return (
@@ -55,21 +52,6 @@ export default function AvatarGroup({
           </button>
         );
       })}
-      {members.length < MAX_PACK_SIZE && (
-        <Tooltip label="Add new pets" position="bottom">
-          <button
-            className="relative rounded-full border-4 border-dashed border-[#cbd5e1] bg-[#f7f7f6] w-12 h-12 -ml-4 z-0 flex items-center justify-center shrink-0 text-[#94a3b8] shadow-sm transition-all duration-300 scale-95 opacity-75 hover:opacity-90 hover:scale-100 hover:border-[#e2cfb7]"
-            onClick={onCreate}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ fontSize: 20 }}
-            >
-              add
-            </span>
-          </button>
-        </Tooltip>
-      )}
     </div>
   );
 }

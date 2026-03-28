@@ -22,6 +22,7 @@ import {
 import { useToast } from "@/components/Toast";
 import SpinLoader from "@/components/SpinLoader";
 import NotFoundPage from "@/components/NotFoundPage";
+import { MAX_PACK_SIZE } from "@/lib/constants";
 
 /* ─────────────────────────────────────────────────────── page ── */
 
@@ -170,9 +171,13 @@ export default function ProfilePage() {
             }))}
             selectedIndex={selectedIndex}
             onSelect={handleSelectProfile}
+          />
+          <MemberIdentity
+            member={member}
+            enableAddPet={isOwner && members.length < MAX_PACK_SIZE}
+            onEdit={handleEditProfile}
             onCreate={handleCreateProfile}
           />
-          <MemberIdentity member={member} onEdit={handleEditProfile} />
           <StatsGrid stats={stats} />
         </div>
 
@@ -215,7 +220,6 @@ export default function ProfilePage() {
               selectedIndex={selectedIndex}
               onSelect={handleSelectProfile}
               showNameTitles
-              onCreate={handleCreateProfile}
             />
 
             {/* Name chips */}
@@ -237,8 +241,10 @@ export default function ProfilePage() {
 
             <MemberIdentity
               member={member}
+              enableAddPet={isOwner && members.length < MAX_PACK_SIZE}
               compact
               onEdit={handleEditProfile}
+              onCreate={handleCreateProfile}
             />
             <StatsGrid stats={stats} compact />
           </div>
