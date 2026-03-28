@@ -1,67 +1,116 @@
 "use client";
 import { useState } from "react";
-import {
-  useForm,
-  Controller,
-  useWatch,
-  Control,
-  FieldErrors,
-} from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { clsx } from "clsx";
 import Link from "next/link";
 import Footer from "@/components/MobileFooter";
-import CoverPhotoPicker from "@/components/CoverPhotoPicker";
 import Image from "next/image";
 import {
   Pet,
   PetEnergyLevel,
   PetSizeCategory,
-  useAuthUser,
   useCreateActivity,
-  useGeneratePhoto,
-  useIncrementAiPhotoCount,
   useProfile,
 } from "@/lib/queries";
 import { useToast } from "@/components/Toast";
 import { useRouter } from "next/navigation";
 import LocationAutoComplete from "@/components/LocationAutocomplete";
 import SpinLoader from "@/components/SpinLoader";
-import dayjs from "dayjs";
+import PhotoUpload from "@/components/PhotoUpload";
+import DateRangeCalendar from "@/components/DateRangeCalendar";
+import BusinessDateSlotPicker, { WeekdaySlots } from "@/components/BusinessDateSlotPicker";
 
 /* ── Types ── */
 type HostType = "personal" | "business";
-type TimeSlot = {
-  id: string;
-  label: string;
-  startTime: string;
-  endTime: string;
-  maxDogs: number;
-};
-type DaySlots = Record<string, TimeSlot[]>; // "YYYY-MM-DD" → slots
+type ScheduleMode = "dateRange" | "scheduler";
 
 /* ── Constants ── */
 const PERSONAL_ACTIVITY_TYPES = [
   { id: "park", icon: "🌳", label: "Park Run" },
   { id: "love", icon: "💕", label: "Love" },
   { id: "training", icon: "🎓", label: "Training" },
-  { id: "swimming", icon: "🏊", label: "Swimming" },
-  { id: "hiking", icon: "🥾", label: "Hiking" },
+  { id: "sport", icon: "🏊", label: "Sport" },
+  { id: "travel", icon: "🥾", label: "Travel" },
   { id: "custom", icon: "✏️", label: "Custom" },
 ];
 
 const BUSINESS_ACTIVITY_TYPES = [
-  { id: "swimming_pool", icon: "🏊", label: "Swimming Pool" },
-  { id: "artificial_turf", icon: "⛳", label: "Artificial Turf" },
-  { id: "real_grass", icon: "🌿", label: "Grass Field" },
   { id: "grooming", icon: "✂️", label: "Grooming" },
-  { id: "hotel_daycare", icon: "🏨", label: "Hotel & Daycare" },
+  { id: "hotel", icon: "🏨", label: "Hotel & Daycare" },
+  { id: "sport", icon: "🏊", label: "Sport" },
+  { id: "travel", icon: "🥾", label: "Travel" },
+  { id: "place", icon: "🌿", label: "Place" },
   { id: "custom", icon: "✏️", label: "Custom" },
 ];
 
-// Used for AI prompt only
-const ACTIVITY_TYPES = PERSONAL_ACTIVITY_TYPES;
-
 const SIZE_OPTIONS: PetSizeCategory[] = ["XS", "SM", "MD", "LG", "XL"];
+
+const ACTIVITY_TAGS: Record<string, string[]> = {
+  park: [
+    "🌿 Chilling",
+    "🌳 Park",
+    "✈️ Travel",
+    "🎡 Amusement Park",
+    "🛍️ Shopping",
+    "🛕 Temple",
+    "🌙 Night Market",
+    "🎬 Movie",
+    "🏃 Running",
+    "📖 Reading",
+    "🎵 Concert",
+    "🚶 Walking",
+    "🤝 Volunteer",
+    "⚽ Sport",
+    "🧘 Yoga",
+    "🔥 BBQ",
+    "🍕 Pizza",
+    "🥗 Vegan",
+    "🍣 Buffet",
+    "🍜 Ramen",
+  ],
+  love: ["✈️ Travel", "☕ Meetup", "🌳 Park", "🏠 Home", "🏢 Condo"],
+  training: [
+    "✈️ Travel",
+    "🌳 Park",
+    "🏠 Home",
+    "🏢 Condo",
+    "⚽ Sport",
+    "🤝 Volunteer",
+    "🌲 Forest",
+  ],
+  sport: [
+    "🏃 Running",
+    "🚶 Walking",
+    "⚽ Football",
+    "🏊 Swimming",
+    "🧘 Yoga",
+    "🥾 Hiking",
+    "🛝 Playground",
+    "⚽ Sport",
+  ],
+  travel: ["🏖️ Beach", "🏔️ Mountain", "🌲 Forest", "🌳 Park"],
+  grooming: [
+    "🛁 Bath",
+    "✂️ Haircare",
+    "💅 Nail",
+    "💄 Makeup",
+    "👗 Dress Up",
+    "🧹 Cleaning",
+    "🩺 Anal Glands",
+  ],
+  hotel: ["✈️ Travel", "🛏️ Bed", "🏠 Home", "🏢 Condo"],
+  place: [
+    "⛳ Artificial Turf",
+    "🌿 Grass Field",
+    "🛝 Playground",
+    "🏠 Home",
+    "🏢 Condo",
+    "🌳 Park",
+    "🏖️ Beach",
+    "🏟️ Indoor Park",
+  ],
+  custom: [],
+};
 
 const labelClass = "text-[13px] font-semibold text-[#334155] mb-2 block ml-1";
 const inputClass =
@@ -84,8 +133,8 @@ type ActivityForm = {
   description: string;
   autoEnd: boolean;
   petRequirements: string[];
-  loveDate: string;
   lovePetId: string;
+  tags: string[];
 };
 
 /** Format a Date as "YYYY-MM-DDTHH:mm" for datetime-local inputs */
@@ -118,10 +167,15 @@ function buildLovePetRequirements(pet: Pet): string[] {
     const label = energyMap[pet.energyLevel as number];
     if (label) personality.push(label);
   }
-  if (pet.socialStyle) personality.push(`Compatible social style: ${pet.socialStyle}`);
-  pet.emotions?.slice(0, 2).forEach((e) => personality.push(`Appreciates: ${e}`));
-  if (pet.goodWith?.includes("Dogs")) personality.push("Must be friendly with dogs");
-  if (pet.goodWith?.includes("Kids")) personality.push("Kid-friendly preferred");
+  if (pet.socialStyle)
+    personality.push(`Compatible social style: ${pet.socialStyle}`);
+  pet.emotions
+    ?.slice(0, 2)
+    .forEach((e) => personality.push(`Appreciates: ${e}`));
+  if (pet.goodWith?.includes("Dogs"))
+    personality.push("Must be friendly with dogs");
+  if (pet.goodWith?.includes("Kids"))
+    personality.push("Kid-friendly preferred");
 
   return [
     ...genetic.map((item) => `genetic:${item}`),
@@ -159,27 +213,19 @@ function getHealthBadge(pet: Pet): {
   };
 }
 
+const defaultTime = {
+  start: Date.now(),
+  end: Date.now(),
+};
+
 /* ── Page ── */
 export default function CreateActivityPage() {
   const router = useRouter();
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [aiImages, setAiImages] = useState<string[]>([]);
-  const [selectedAiUrl, setSelectedAiUrl] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [daySlots, setDaySlots] = useState<DaySlots>({});
-  const [calendarMonth, setCalendarMonth] = useState(dayjs().startOf("month"));
+  const [coverFiles, setCoverFiles] = useState<File[]>([]);
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("dateRange");
+  const [weekdaySlots, setWeekdaySlots] = useState<WeekdaySlots>({});
   const { toast } = useToast();
-
-  const { data: user } = useAuthUser();
   const { data: allProfiles } = useProfile();
-
-  const { mutateAsync: generatePhoto } = useGeneratePhoto(
-    `dog activity cover photo, ${ACTIVITY_TYPES[0].label} with dogs, outdoor setting, vibrant and inviting atmosphere. The image should prominently feature dogs having fun in a park environment, with greenery and sunlight. Always include dogs in the image.`,
-  );
-  const { mutate: incrementAiCount } = useIncrementAiPhotoCount(
-    user?._id,
-    "aiCoverImageCount",
-  );
   const { mutate: createActivity, isPending } = useCreateActivity();
 
   const {
@@ -199,18 +245,17 @@ export default function CreateActivityPage() {
       longitude: null,
       sizes: ["MD"],
       dogLimit: 8,
-      startDate: toLocalDateTimeString(new Date(Date.now() + 60 * 60 * 1000)),
-      endDate: toLocalDateTimeString(new Date(Date.now() + 3 * 60 * 60 * 1000)),
+      startDate: toLocalDateTimeString(
+        new Date(defaultTime.start + 60 * 60 * 1000),
+      ),
+      endDate: toLocalDateTimeString(
+        new Date(defaultTime.end + 3 * 60 * 60 * 1000),
+      ),
       description: "",
       autoEnd: true,
       petRequirements: ["Vaccine", "Flea & Tick", "Microchip Verified"],
-      loveDate: (() => {
-        const d = new Date();
-        d.setDate(d.getDate() + 1);
-        const pad = (n: number) => String(n).padStart(2, "0");
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-      })(),
       lovePetId: "",
+      tags: [],
     },
   });
 
@@ -218,6 +263,8 @@ export default function CreateActivityPage() {
   const activityType = useWatch({ control, name: "type" });
   const isLove = activityType === "love";
   const lovePetId = useWatch({ control, name: "lovePetId" });
+  const watchStartDate = useWatch({ control, name: "startDate" });
+  const watchEndDate = useWatch({ control, name: "endDate" });
 
   if (isPending) return <SpinLoader title="Creating the activity" />;
 
@@ -228,25 +275,8 @@ export default function CreateActivityPage() {
     petRequirements,
     ...data
   }: ActivityForm) => {
-    let startDate = data.startDate;
-    let endDate = data.endDate;
-
-    // For business, derive startDate/endDate from first slot
-    if (data.hostType === "business") {
-      const firstDay = Object.keys(daySlots).sort()[0];
-      const firstSlot = firstDay ? daySlots[firstDay]?.[0] : null;
-      if (firstSlot) {
-        startDate = `${firstDay}T${firstSlot.startTime}`;
-        endDate = `${firstDay}T${firstSlot.endTime}`;
-      }
-    }
-
-    // For love type, derive startDate/endDate from the single appointment date
-    if (data.type === "love") {
-      const d = data.loveDate || data.startDate.split("T")[0];
-      startDate = `${d}T09:00`;
-      endDate = `${d}T23:59`;
-    }
+    const startDate = data.startDate;
+    const endDate = data.endDate;
 
     const resolvedType =
       data.type === "custom" ? customType.trim() || "custom" : data.type;
@@ -267,11 +297,14 @@ export default function CreateActivityPage() {
         autoEnd,
         petRequirements: resolvedPetRequirements,
         amountOfAttendees: dogLimit,
-        image: coverFile ?? selectedAiUrl ?? undefined,
+        image: coverFiles ?? undefined,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         latitude: data.latitude ?? undefined,
         longitude: data.longitude ?? undefined,
+        ...(scheduleMode === "scheduler" && Object.keys(weekdaySlots).length > 0
+          ? { weekdaySlots }
+          : {}),
       },
       {
         onSuccess: () => {
@@ -282,239 +315,8 @@ export default function CreateActivityPage() {
     );
   };
 
-  const handleGenerate = async () => {
-    setIsGenerating(true);
-    try {
-      const data = await generatePhoto();
-      setAiImages(data ?? []);
-      incrementAiCount(user?.aiCoverImageCount ?? 0);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const titleField = (
-    <Controller
-      control={control}
-      name="title"
-      rules={{ required: "Activity title is required." }}
-      render={({ field }) => (
-        <TitleField
-          value={field.value}
-          onChange={field.onChange}
-          error={errors.title?.message}
-        />
-      )}
-    />
-  );
-
-  const descriptionField = (
-    <Controller
-      control={control}
-      name="description"
-      rules={{ required: "Description is required." }}
-      render={({ field }) => (
-        <DescriptionSection
-          value={field.value}
-          onChange={field.onChange}
-          error={errors.description?.message}
-        />
-      )}
-    />
-  );
-
   const pets = allProfiles?.pets ?? [];
   const selectedLovePet = pets.find((p) => p._id === lovePetId) ?? null;
-
-  const loveDateField = (
-    <Controller
-      control={control}
-      name="loveDate"
-      rules={{ required: "Appointment date is required." }}
-      render={({ field }) => (
-        <LoveDateSection
-          value={field.value}
-          onChange={field.onChange}
-          error={errors.loveDate?.message}
-        />
-      )}
-    />
-  );
-
-  const lovePetSelectorField = (
-    <Controller
-      control={control}
-      name="lovePetId"
-      rules={{ required: isLove ? "Please select a dog for matching." : false }}
-      render={({ field }) => (
-        <PetSelectorSection
-          pets={pets}
-          selectedId={field.value}
-          onChange={field.onChange}
-          error={errors.lovePetId?.message}
-        />
-      )}
-    />
-  );
-
-  const submitButton = (
-    <button
-      type="submit"
-      className={clsx(
-        "w-full h-14 rounded-[14px] flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity mb-2 gap-3",
-        isLove ? "bg-rose-500 text-white" : "bg-[#e2cfb7] text-[#1e293b]",
-      )}
-    >
-      <span className="text-[17px] font-bold">
-        {isLove ? "Find My Match 💕" : "Create Activity"}
-      </span>
-      {!isLove && <span>🐾</span>}
-    </button>
-  );
-
-  const coverPickerProps = {
-    previewUrl: coverFile
-      ? URL.createObjectURL(coverFile)
-      : (selectedAiUrl ?? undefined),
-    aiImages,
-    isGenerating,
-    selectedAiUrl,
-    usedCount: user?.aiCoverImageCount ?? 0,
-    onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-      const f = e.target.files?.[0];
-      if (f) {
-        setCoverFile(f);
-        setSelectedAiUrl(null);
-        setValue("image", URL.createObjectURL(f));
-      }
-    },
-    onAiSelect: (url: string) => {
-      setCoverFile(null);
-      setSelectedAiUrl(url);
-      setValue("image", url);
-    },
-    onGenerate: handleGenerate,
-  };
-
-  const hostTypeField = (
-    <Controller
-      control={control}
-      name="hostType"
-      render={({ field }) => (
-        <HostTypeSection
-          value={field.value}
-          onChange={(v) => {
-            field.onChange(v);
-            setValue("type", v === "business" ? "swimming_pool" : "park");
-          }}
-        />
-      )}
-    />
-  );
-
-  const activityTypeField = (
-    <>
-      <Controller
-        control={control}
-        name="type"
-        render={({ field }) => (
-          <ActivityTypeSection
-            value={field.value}
-            onChange={field.onChange}
-            hostType={hostType}
-          />
-        )}
-      />
-      {activityType === "custom" && (
-        <div>
-          <label className={labelClass}>
-            Custom Activity Name <span className="text-red-400">*</span>
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. Frisbee in the park"
-            className={clsx(
-              inputClass,
-              errors.customType &&
-                "border-red-400 focus:border-red-400 focus:ring-red-100",
-            )}
-            {...register("customType", {
-              validate: (v) =>
-                activityType !== "custom" ||
-                !!v.trim() ||
-                "Please enter a custom activity name.",
-            })}
-          />
-          {errors.customType && (
-            <p className="text-[11px] text-red-500 mt-1 ml-0.5">
-              {errors.customType.message}
-            </p>
-          )}
-        </div>
-      )}
-    </>
-  );
-
-  const dateField =
-    hostType === "business" ? (
-      <BusinessCalendar
-        month={calendarMonth}
-        onMonthChange={setCalendarMonth}
-        daySlots={daySlots}
-        onDaySlotsChange={setDaySlots}
-      />
-    ) : isLove ? (
-      loveDateField
-    ) : (
-      <DateRangeSection control={control} errors={errors} />
-    );
-
-  const autoEndField =
-    hostType === "business" ? (
-      <Controller
-        control={control}
-        name="autoEnd"
-        render={({ field }) => (
-          <AutoEndToggle value={field.value} onChange={field.onChange} />
-        )}
-      />
-    ) : null;
-
-  const petRequirementsField = (
-    <Controller
-      control={control}
-      name="petRequirements"
-      render={({ field }) => (
-        <PetRequirementsSection value={field.value} onChange={field.onChange} />
-      )}
-    />
-  );
-
-  const locationField = (
-    <div>
-      <LocationAutoComplete
-        onSelect={(loc) => {
-          setValue("locationName", loc.locationName, { shouldValidate: true });
-          setValue("latitude", loc.latitude);
-          setValue("longitude", loc.longitude);
-        }}
-        registration={register("locationName", {
-          required: "Location is required.",
-        })}
-        required
-        error={
-          errors.locationName
-            ? new Error(errors.locationName.message)
-            : undefined
-        }
-      />
-      {errors.locationName && (
-        <p className="text-[11px] text-red-500 mt-1 ml-0.5">
-          {errors.locationName.message}
-        </p>
-      )}
-    </div>
-  );
 
   return (
     <div
@@ -527,7 +329,7 @@ export default function CreateActivityPage() {
         {/* Page header */}
         <div
           className={clsx(
-            "flex items-center justify-between px-4 md:px-8 py-3 border-b sticky top-0 z-10 transition-colors",
+            "flex items-center px-4 py-3 border-b sticky top-0 z-10 transition-colors",
             isLove
               ? "bg-rose-50/90 border-rose-200 backdrop-blur-md"
               : "border-[rgba(225,207,183,0.2)] bg-[#f7f7f6]",
@@ -535,13 +337,13 @@ export default function CreateActivityPage() {
         >
           <Link
             href="/"
-            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[rgba(226,207,183,0.2)] transition-colors md:hidden"
+            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[rgba(226,207,183,0.2)] transition-colors shrink-0"
           >
             <span className="material-symbols-outlined text-[#1e293b]">
               arrow_back
             </span>
           </Link>
-          <div className="text-center w-full">
+          <div className="flex-1 text-center pr-10">
             <h1 className="text-[17px] font-bold text-[#1e293b] tracking-tight">
               Create Activity
             </h1>
@@ -549,33 +351,188 @@ export default function CreateActivityPage() {
               New Event
             </p>
           </div>
-          <div className="w-10" />
         </div>
 
         {/* Form */}
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="pb-28 md:pb-8 w-full"
-        >
-          {/* ── Mobile layout ── */}
-          <div className="md:hidden px-4 pt-5 flex flex-col gap-5">
-            {hostTypeField}
-            <CoverPhotoPicker {...coverPickerProps} />
-            {titleField}
-            {activityTypeField}
-            {locationField}
-            {dateField}
-            {autoEndField}
+        <form onSubmit={handleSubmit(onSubmit)} className="pb-28">
+          <div className="max-w-lg mx-auto px-4 pt-5 flex flex-col gap-5">
+            <Controller
+              control={control}
+              name="hostType"
+              render={({ field }) => (
+                <HostTypeSection
+                  value={field.value}
+                  onChange={(v) => {
+                    field.onChange(v);
+                    setValue(
+                      "type",
+                      v === "business" ? "swimming_pool" : "park",
+                    );
+                  }}
+                />
+              )}
+            />
+
+            <PhotoUpload multiple files={coverFiles} onChange={setCoverFiles} />
+
+            <Controller
+              control={control}
+              name="title"
+              rules={{ required: "Activity title is required." }}
+              render={({ field }) => (
+                <TitleField
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.title?.message}
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="type"
+              render={({ field }) => (
+                <ActivityTypeSection
+                  value={field.value}
+                  onChange={field.onChange}
+                  hostType={hostType}
+                />
+              )}
+            />
+            {activityType === "custom" && (
+              <div>
+                <label className={labelClass}>
+                  Custom Activity Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Frisbee in the park"
+                  className={clsx(
+                    inputClass,
+                    errors.customType &&
+                      "border-red-400 focus:border-red-400 focus:ring-red-100",
+                  )}
+                  {...register("customType", {
+                    validate: (v) =>
+                      activityType !== "custom" ||
+                      !!v.trim() ||
+                      "Please enter a custom activity name.",
+                  })}
+                />
+                {errors.customType && (
+                  <p className="text-[11px] text-red-500 mt-1 ml-0.5">
+                    {errors.customType.message}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <Controller
+              control={control}
+              name="tags"
+              render={({ field }) => (
+                <TagSection
+                  activityType={activityType}
+                  selected={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+
+            <div>
+              <LocationAutoComplete
+                onSelect={(loc) => {
+                  setValue("locationName", loc.locationName, {
+                    shouldValidate: true,
+                  });
+                  setValue("latitude", loc.latitude);
+                  setValue("longitude", loc.longitude);
+                }}
+                registration={register("locationName", {
+                  required: "Location is required.",
+                })}
+                required
+                error={
+                  errors.locationName
+                    ? new Error(errors.locationName.message)
+                    : undefined
+                }
+              />
+              {errors.locationName && (
+                <p className="text-[11px] text-red-500 mt-1 ml-0.5">
+                  {errors.locationName.message}
+                </p>
+              )}
+            </div>
+            {hostType === "business" ? (
+              <>
+                <ScheduleModeToggle
+                  mode={scheduleMode}
+                  onChange={setScheduleMode}
+                />
+                {scheduleMode === "scheduler" ? (
+                  <BusinessDateSlotPicker
+                    weekdaySlots={weekdaySlots}
+                    onChange={setWeekdaySlots}
+                  />
+                ) : (
+                  <DateRangeCalendar
+                    startDate={watchStartDate}
+                    endDate={watchEndDate}
+                    onStartChange={(v) =>
+                      setValue("startDate", v, { shouldValidate: true })
+                    }
+                    onEndChange={(v) =>
+                      setValue("endDate", v, { shouldValidate: true })
+                    }
+                  />
+                )}
+              </>
+            ) : (
+              <DateRangeCalendar
+                isSingleDate={isLove}
+                startDate={watchStartDate}
+                endDate={watchEndDate}
+                onStartChange={(v) =>
+                  setValue("startDate", v, { shouldValidate: true })
+                }
+                onEndChange={(v) =>
+                  setValue("endDate", v, { shouldValidate: true })
+                }
+              />
+            )}
+
             {isLove ? (
               <>
-                {lovePetSelectorField}
+                <Controller
+                  control={control}
+                  name="lovePetId"
+                  rules={{ required: "Please select a dog for matching." }}
+                  render={({ field }) => (
+                    <PetSelectorSection
+                      pets={pets}
+                      selectedId={field.value}
+                      onChange={field.onChange}
+                      error={errors.lovePetId?.message}
+                    />
+                  )}
+                />
                 {selectedLovePet && (
                   <LovePetRequirements pet={selectedLovePet} />
                 )}
               </>
             ) : (
               <>
-                {petRequirementsField}
+                <Controller
+                  control={control}
+                  name="petRequirements"
+                  render={({ field }) => (
+                    <PetRequirementsSection
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
                 <Controller
                   control={control}
                   name="sizes"
@@ -600,62 +557,34 @@ export default function CreateActivityPage() {
                 )}
               </>
             )}
-            {descriptionField}
-            {submitButton}
-          </div>
 
-          {/* ── Desktop layout ── */}
-          <div className="hidden md:grid md:grid-cols-2 md:gap-8 px-8 pt-8">
-            {/* Left col */}
-            <div className="flex flex-col gap-6">
-              <CoverPhotoPicker {...coverPickerProps} />
-              {isLove ? (
-                <>
-                  {lovePetSelectorField}
-                  {selectedLovePet && (
-                    <LovePetRequirements pet={selectedLovePet} />
-                  )}
-                </>
-              ) : (
-                <>
-                  {hostType === "personal" && (
-                    <Controller
-                      control={control}
-                      name="dogLimit"
-                      render={({ field }) => (
-                        <DogLimitSection
-                          value={field.value}
-                          onChange={field.onChange}
-                        />
-                      )}
-                    />
-                  )}
-                  <Controller
-                    control={control}
-                    name="sizes"
-                    render={({ field }) => (
-                      <DogSizeSection
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
-                    )}
-                  />
-                </>
+            <Controller
+              control={control}
+              name="description"
+              rules={{ required: "Description is required." }}
+              render={({ field }) => (
+                <DescriptionSection
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.description?.message}
+                />
               )}
-            </div>
+            />
 
-            {/* Right col */}
-            <div className="flex flex-col gap-6">
-              {hostTypeField}
-              {titleField}
-              {activityTypeField}
-              {locationField}
-              {dateField}
-              {autoEndField}
-              {!isLove && petRequirementsField}
-              {descriptionField}
-              {submitButton}
-            </div>
+            <button
+              type="submit"
+              className={clsx(
+                "w-full h-14 rounded-[14px] flex items-center justify-center shadow-sm hover:opacity-90 transition-opacity mb-2 gap-3",
+                isLove
+                  ? "bg-rose-500 text-white"
+                  : "bg-[#e2cfb7] text-[#1e293b]",
+              )}
+            >
+              <span className="text-[17px] font-bold">
+                {isLove ? "Find My Match 💕" : "Create Activity"}
+              </span>
+              {!isLove && <span>🐾</span>}
+            </button>
           </div>
         </form>
       </div>
@@ -700,17 +629,12 @@ function HostTypeSection({
             className={clsx(
               "flex flex-col items-start gap-0.5 rounded-2xl border px-4 py-3 transition-all text-left",
               value === opt.id
-                ? "bg-[#1e293b] border-[#1e293b]"
+                ? "bg-[#e2cfb7] border-[#e2cfb7]"
                 : "bg-white border-[#e2e8f0] hover:border-[#e2cfb7]",
             )}
           >
             <span className="text-xl mb-1">{opt.icon}</span>
-            <p
-              className={clsx(
-                "text-[13px] font-bold",
-                value === opt.id ? "text-white" : "text-[#1e293b]",
-              )}
-            >
+            <p className={clsx("text-[13px] font-bold text-[#1e293b]")}>
               {opt.label}
             </p>
             <p
@@ -753,22 +677,221 @@ function ActivityTypeSection({
             className={clsx(
               "h-18 rounded-2xl flex flex-col items-center justify-center gap-1 border transition-all",
               value === type.id
-                ? "bg-[#1e293b] border-[#1e293b]"
+                ? "bg-[#e2cfb7] border-[#e2cfb7]"
                 : "bg-white border-[#e2e8f0] hover:border-[#e2cfb7]",
             )}
           >
             <span className="text-2xl">{type.icon}</span>
-            <span
-              className={clsx(
-                "text-[11px] font-bold",
-                value === type.id ? "text-white" : "text-[#334155]",
-              )}
-            >
+            <span className={clsx("text-[11px] font-bold text-[#334155]")}>
               {type.label}
             </span>
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ── TagSection ── */
+function TagSection({
+  activityType,
+  selected,
+  onChange,
+}: {
+  activityType: string;
+  selected: string[];
+  onChange: (tags: string[]) => void;
+}) {
+  const [input, setInput] = useState("");
+  const [emoji, setEmoji] = useState("🏷️");
+  const [showPicker, setShowPicker] = useState(false);
+
+  const EMOJI_OPTIONS = [
+    "🏷️",
+    "🐾",
+    "🌿",
+    "⭐",
+    "🎯",
+    "🔥",
+    "💡",
+    "🏅",
+    "✅",
+    "📍",
+    "🎪",
+    "🌟",
+    "🧡",
+    "🐕",
+    "🌈",
+    "🏆",
+    "🎉",
+    "💪",
+    "🌸",
+    "☕",
+  ];
+
+  const options =
+    activityType === "custom"
+      ? [...new Set(Object.values(ACTIVITY_TAGS).flat())]
+      : (ACTIVITY_TAGS[activityType] ?? []);
+
+  const toggle = (tag: string) =>
+    onChange(
+      selected.includes(tag)
+        ? selected.filter((t) => t !== tag)
+        : [...selected, tag],
+    );
+
+  const addCustom = () => {
+    const label = input.trim();
+    if (!label) return;
+    const tag = `${emoji} ${label}`;
+    if (selected.includes(tag)) return;
+    onChange([...selected, tag]);
+    setInput("");
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <label className={labelClass}>Tags</label>
+
+      {options.length > 0 && (
+        <div className="flex flex-wrap gap-2 max-h-20 overflow-y-auto">
+          {options.map((tag) => {
+            const active = selected.includes(tag);
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => toggle(tag)}
+                className={clsx(
+                  "px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-all shrink-0",
+                  active
+                    ? "bg-[#e2cfb7] border-[#e2cfb7] text-[#1e293b]"
+                    : "bg-white border-[#e2e8f0] text-[#64748b] hover:border-[#e2cfb7]",
+                )}
+              >
+                {tag}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Custom tag input with emoji prefix */}
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowPicker((v) => !v)}
+            title="Pick emoji"
+            className="h-10 w-10 shrink-0 rounded-xl border border-[rgba(226,207,183,0.4)] bg-white flex items-center justify-center text-lg hover:border-[#e2cfb7] transition-colors"
+          >
+            {emoji}
+          </button>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              setShowPicker(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addCustom();
+              }
+            }}
+            placeholder="Add your own tag…"
+            className="flex-1 h-10 px-3 rounded-xl border border-[rgba(226,207,183,0.4)] bg-white text-[13px] text-[#1e293b] placeholder-[#94a3b8] outline-none focus:border-[#e2cfb7] focus:ring-2 focus:ring-[rgba(226,207,183,0.3)]"
+          />
+          <button
+            type="button"
+            onClick={addCustom}
+            disabled={
+              !input.trim() || selected.includes(`${emoji} ${input.trim()}`)
+            }
+            className="h-10 px-4 shrink-0 rounded-xl bg-[#e2cfb7] text-[#1e293b] text-[12px] font-bold disabled:opacity-40 hover:opacity-90 transition-opacity"
+          >
+            Add
+          </button>
+        </div>
+        {/* Duplicate warning */}
+        {input.trim() && selected.includes(`${emoji} ${input.trim()}`) && (
+          <p className="text-[11px] text-amber-500 px-1">Already added</p>
+        )}
+        {/* Filtered suggestions from preset options */}
+        {input.trim() &&
+          !selected.includes(`${emoji} ${input.trim()}`) &&
+          (() => {
+            const q = input.trim().toLowerCase();
+            const suggestions = options.filter(
+              (t) => t.toLowerCase().includes(q) && !selected.includes(t),
+            );
+            return suggestions.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {suggestions.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      toggle(t);
+                      setInput("");
+                    }}
+                    className="px-3 py-1 rounded-full text-[12px] font-semibold border border-[#e2cfb7] bg-[rgba(226,207,183,0.15)] text-[#64748b] hover:bg-[#e2cfb7] hover:text-[#1e293b] transition-all"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            ) : null;
+          })()}
+        {showPicker && (
+          <div className="flex flex-wrap gap-1.5 p-3 bg-white border border-[rgba(226,207,183,0.4)] rounded-xl">
+            {EMOJI_OPTIONS.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => {
+                  setEmoji(e);
+                  setShowPicker(false);
+                }}
+                className={clsx(
+                  "w-8 h-8 rounded-lg text-lg flex items-center justify-center transition-all",
+                  e === emoji
+                    ? "bg-[#e2cfb7]"
+                    : "hover:bg-[rgba(226,207,183,0.2)]",
+                )}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* User-added custom tags not in preset list */}
+      {selected.filter((t) => !options.includes(t)).length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selected
+            .filter((t) => !options.includes(t))
+            .map((tag) => (
+              <span
+                key={tag}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-semibold bg-[#e2cfb7] border border-[#e2cfb7] text-[#1e293b]"
+              >
+                {tag}
+                <button type="button" onClick={() => toggle(tag)}>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: 12 }}
+                  >
+                    close
+                  </span>
+                </button>
+              </span>
+            ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -799,432 +922,6 @@ function TitleField({
         )}
       />
       {error && <p className="text-[11px] text-red-500 mt-1 ml-0.5">{error}</p>}
-    </div>
-  );
-}
-
-/* ── DateRangeSection (personal) ── */
-function DateRangeSection({
-  control,
-  errors,
-}: {
-  control: Control<ActivityForm>;
-  errors: FieldErrors<ActivityForm>;
-}) {
-  const startDate = useWatch({ control, name: "startDate" });
-  const hasError = errors.startDate || errors.endDate;
-
-  return (
-    <div>
-      <label className={labelClass}>
-        Date &amp; Time <span className="text-red-400">*</span>
-      </label>
-      <div
-        className={clsx(
-          "bg-white rounded-[14px] border divide-y",
-          hasError
-            ? "border-red-400 divide-red-100"
-            : "border-[rgba(226,207,183,0.4)] divide-[rgba(226,207,183,0.4)]",
-        )}
-      >
-        <div className="flex items-center px-4 gap-3">
-          <span
-            className="material-symbols-outlined text-[#94a3b8]"
-            style={{ fontSize: 18 }}
-          >
-            play_circle
-          </span>
-          <div className="flex-1 py-2">
-            <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-0.5">
-              Start
-            </p>
-            <Controller
-              control={control}
-              name="startDate"
-              rules={{ required: "Start date is required." }}
-              render={({ field }) => (
-                <input
-                  type="datetime-local"
-                  min={toLocalDateTimeString(new Date())}
-                  className="w-full text-[14px] text-[#1e293b] bg-transparent outline-none"
-                  {...field}
-                />
-              )}
-            />
-          </div>
-        </div>
-        <div className="flex items-center px-4 gap-3">
-          <span
-            className="material-symbols-outlined text-[#94a3b8]"
-            style={{ fontSize: 18 }}
-          >
-            stop_circle
-          </span>
-          <div className="flex-1 py-2">
-            <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-0.5">
-              End
-            </p>
-            <Controller
-              control={control}
-              name="endDate"
-              rules={{ required: "End date is required." }}
-              render={({ field }) => (
-                <input
-                  type="datetime-local"
-                  min={startDate || undefined}
-                  className="w-full text-[14px] text-[#1e293b] bg-transparent outline-none"
-                  {...field}
-                />
-              )}
-            />
-          </div>
-        </div>
-      </div>
-      {errors.startDate && (
-        <p className="text-[11px] text-red-500 mt-1 ml-0.5">
-          {errors.startDate.message}
-        </p>
-      )}
-      {errors.endDate && (
-        <p className="text-[11px] text-red-500 mt-1 ml-0.5">
-          {errors.endDate.message}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/* ── BusinessCalendar ── */
-function BusinessCalendar({
-  month,
-  onMonthChange,
-  daySlots,
-  onDaySlotsChange,
-}: {
-  month: dayjs.Dayjs;
-  onMonthChange: (m: dayjs.Dayjs) => void;
-  daySlots: DaySlots;
-  onDaySlotsChange: (slots: DaySlots) => void;
-}) {
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const today = dayjs().startOf("day");
-  const startOfMonth = month.startOf("month");
-  const daysInMonth = month.daysInMonth();
-  // Pad to Monday-start (dayjs: 0=Sun, convert → 0=Mon)
-  const firstDayOffset = (startOfMonth.day() + 6) % 7;
-  const cells: (dayjs.Dayjs | null)[] = [
-    ...Array<null>(firstDayOffset).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) =>
-      startOfMonth.add(i, "day"),
-    ),
-  ];
-
-  const handleAddSlot = (slot: Omit<TimeSlot, "id">) => {
-    if (!selectedDay) return;
-    const id = `${selectedDay}-${Date.now()}`;
-    onDaySlotsChange({
-      ...daySlots,
-      [selectedDay]: [...(daySlots[selectedDay] ?? []), { ...slot, id }],
-    });
-  };
-
-  const handleRemoveSlot = (slotId: string) => {
-    if (!selectedDay) return;
-    const updated = (daySlots[selectedDay] ?? []).filter(
-      (s) => s.id !== slotId,
-    );
-    const next = { ...daySlots };
-    if (updated.length === 0) delete next[selectedDay];
-    else next[selectedDay] = updated;
-    onDaySlotsChange(next);
-  };
-
-  return (
-    <div>
-      <label className={labelClass}>
-        Available Dates &amp; Slots <span className="text-red-400">*</span>
-      </label>
-      <div className="bg-white rounded-[14px] border border-[rgba(226,207,183,0.4)] overflow-hidden">
-        {/* Month nav */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(226,207,183,0.3)]">
-          <button
-            type="button"
-            onClick={() => {
-              onMonthChange(month.subtract(1, "month"));
-              setSelectedDay(null);
-            }}
-            disabled={month.isSame(dayjs().startOf("month"), "month")}
-            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[rgba(226,207,183,0.2)] disabled:opacity-30 transition-colors"
-          >
-            <span
-              className="material-symbols-outlined text-[#1e293b]"
-              style={{ fontSize: 18 }}
-            >
-              chevron_left
-            </span>
-          </button>
-          <p className="text-[14px] font-bold text-[#1e293b]">
-            {month.format("MMMM YYYY")}
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              onMonthChange(month.add(1, "month"));
-              setSelectedDay(null);
-            }}
-            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[rgba(226,207,183,0.2)] transition-colors"
-          >
-            <span
-              className="material-symbols-outlined text-[#1e293b]"
-              style={{ fontSize: 18 }}
-            >
-              chevron_right
-            </span>
-          </button>
-        </div>
-
-        {/* Weekday headers */}
-        <div className="grid grid-cols-7 text-center px-2 pt-2">
-          {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d) => (
-            <p key={d} className="text-[10px] font-bold text-[#94a3b8] py-1">
-              {d}
-            </p>
-          ))}
-        </div>
-
-        {/* Day cells */}
-        <div className="grid grid-cols-7 gap-0.5 px-2 pb-3">
-          {cells.map((day, i) => {
-            if (!day) return <div key={`e-${i}`} />;
-            const dateKey = day.format("YYYY-MM-DD");
-            const slots = daySlots[dateKey] ?? [];
-            const isPast = day.isBefore(today);
-            const isSelected = selectedDay === dateKey;
-            const hasSlots = slots.length > 0;
-
-            return (
-              <button
-                key={dateKey}
-                type="button"
-                disabled={isPast}
-                onClick={() => setSelectedDay(isSelected ? null : dateKey)}
-                className={clsx(
-                  "flex flex-col items-center justify-center rounded-xl py-2 gap-0.5 transition-all",
-                  isPast && "opacity-30 cursor-not-allowed",
-                  isSelected && "bg-[#1e293b]",
-                  !isSelected && hasSlots && "bg-[rgba(226,207,183,0.35)]",
-                  !isSelected &&
-                    !hasSlots &&
-                    !isPast &&
-                    "hover:bg-[rgba(226,207,183,0.15)]",
-                )}
-              >
-                <p
-                  className={clsx(
-                    "text-[13px] font-bold leading-none",
-                    isSelected ? "text-white" : "text-[#1e293b]",
-                  )}
-                >
-                  {day.date()}
-                </p>
-                {hasSlots && (
-                  <div
-                    className={clsx(
-                      "text-[9px] font-bold px-1 rounded-full",
-                      isSelected ? "text-[#e2cfb7]" : "text-[#94a3b8]",
-                    )}
-                  >
-                    {slots.length}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Slot editor */}
-        {selectedDay && (
-          <SlotEditor
-            date={selectedDay}
-            slots={daySlots[selectedDay] ?? []}
-            onAdd={handleAddSlot}
-            onRemove={handleRemoveSlot}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ── SlotEditor ── */
-function SlotEditor({
-  date,
-  slots,
-  onAdd,
-  onRemove,
-}: {
-  date: string;
-  slots: TimeSlot[];
-  onAdd: (slot: Omit<TimeSlot, "id">) => void;
-  onRemove: (id: string) => void;
-}) {
-  const [showForm, setShowForm] = useState(false);
-  const [label, setLabel] = useState("");
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("11:00");
-  const [maxDogs, setMaxDogs] = useState(8);
-
-  const handleAdd = () => {
-    if (!label.trim()) return;
-    onAdd({ label, startTime, endTime, maxDogs });
-    setLabel("");
-    setStartTime("09:00");
-    setEndTime("11:00");
-    setMaxDogs(8);
-    setShowForm(false);
-  };
-
-  return (
-    <div className="border-t border-[rgba(226,207,183,0.3)] px-4 py-3">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-[13px] font-bold text-[#1e293b]">
-          {dayjs(date).format("ddd, D MMM")} — Time Slots
-        </p>
-        <button
-          type="button"
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[rgba(226,207,183,0.3)] text-[12px] font-bold text-[#1e293b] hover:bg-[rgba(226,207,183,0.5)] transition-colors"
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
-            add
-          </span>
-          Add Slot
-        </button>
-      </div>
-
-      {/* Existing slots */}
-      {slots.length > 0 && (
-        <div className="flex flex-col gap-2 mb-3">
-          {slots.map((slot) => (
-            <div
-              key={slot.id}
-              className="flex items-center justify-between bg-[#f8fafc] rounded-xl px-3 py-2.5 border border-[#f1f5f9]"
-            >
-              <div>
-                <p className="text-[13px] font-bold text-[#1e293b]">
-                  {slot.label}
-                </p>
-                <p className="text-[11px] text-[#64748b]">
-                  {slot.startTime} – {slot.endTime} · max {slot.maxDogs} dogs
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onRemove(slot.id)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50 transition-colors group"
-              >
-                <span
-                  className="material-symbols-outlined text-[#94a3b8] group-hover:text-red-400 transition-colors"
-                  style={{ fontSize: 16 }}
-                >
-                  delete
-                </span>
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Empty state */}
-      {slots.length === 0 && !showForm && (
-        <p className="text-[12px] text-[#94a3b8] text-center py-3">
-          No slots yet. Click &ldquo;Add Slot&rdquo; to set a time window.
-        </p>
-      )}
-
-      {/* Add slot form */}
-      {showForm && (
-        <div className="bg-[rgba(226,207,183,0.08)] rounded-xl border border-[rgba(226,207,183,0.4)] p-3 flex flex-col gap-3">
-          <div>
-            <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide mb-1">
-              Slot Label
-            </p>
-            <input
-              type="text"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. Morning Session"
-              className="w-full h-10 rounded-lg border border-[rgba(226,207,183,0.4)] bg-white px-3 text-[13px] text-[#1e293b] outline-none focus:border-[#e1cfb7]"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide mb-1">
-                Start
-              </p>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full h-10 rounded-lg border border-[rgba(226,207,183,0.4)] bg-white px-3 text-[13px] text-[#1e293b] outline-none focus:border-[#e1cfb7]"
-              />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide mb-1">
-                End
-              </p>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-full h-10 rounded-lg border border-[rgba(226,207,183,0.4)] bg-white px-3 text-[13px] text-[#1e293b] outline-none focus:border-[#e1cfb7]"
-              />
-            </div>
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide mb-1">
-              Max Dogs
-            </p>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setMaxDogs(Math.max(1, maxDogs - 1))}
-                className="w-8 h-8 rounded-full bg-white border border-[rgba(226,207,183,0.4)] flex items-center justify-center text-lg font-bold text-[#1e293b]"
-              >
-                −
-              </button>
-              <p className="text-[20px] font-extrabold text-[#1e293b] w-8 text-center">
-                {maxDogs}
-              </p>
-              <button
-                type="button"
-                onClick={() => setMaxDogs(Math.min(50, maxDogs + 1))}
-                className="w-8 h-8 rounded-full bg-white border border-[rgba(226,207,183,0.4)] flex items-center justify-center text-lg font-bold text-[#1e293b]"
-              >
-                +
-              </button>
-            </div>
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="flex-1 h-10 rounded-xl border border-[#e2e8f0] text-[13px] font-bold text-[#64748b] hover:bg-[#f8fafc] transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleAdd}
-              disabled={!label.trim()}
-              className="flex-1 h-10 rounded-xl bg-[#1e293b] text-[13px] font-bold text-white disabled:opacity-40 transition-opacity"
-            >
-              Add
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1332,49 +1029,49 @@ function PetRequirementsSection({
   );
 }
 
-/* ── AutoEndToggle ── */
-function AutoEndToggle({
-  value,
+/* ── ScheduleModeToggle ── */
+function ScheduleModeToggle({
+  mode,
   onChange,
 }: {
-  value: boolean;
-  onChange: (v: boolean) => void;
+  mode: ScheduleMode;
+  onChange: (m: ScheduleMode) => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => onChange(!value)}
-      className={clsx(
-        "w-full flex items-center gap-4 rounded-[14px] border px-4 py-3.5 transition-all text-left",
-        value
-          ? "bg-white border-[rgba(226,207,183,0.4)]"
-          : "bg-[rgba(226,207,183,0.12)] border-[#e2cfb7]",
-      )}
-    >
-      <div
-        className={clsx(
-          "w-11 h-6 rounded-full relative transition-colors shrink-0",
-          value ? "bg-[#e2cfb7]" : "bg-[#1e293b]",
-        )}
-      >
-        <div
-          className={clsx(
-            "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform",
-            value ? "translate-x-0.5" : "translate-x-5",
-          )}
-        />
+    <div>
+      <label className={labelClass}>Schedule Type</label>
+      <div className="grid grid-cols-2 gap-2">
+        {(
+          [
+            { id: "dateRange", icon: "date_range", label: "Date Range", desc: "Single start & end date" },
+            { id: "scheduler", icon: "calendar_view_week", label: "Scheduler", desc: "Pick dates & add slots" },
+          ] as { id: ScheduleMode; icon: string; label: string; desc: string }[]
+        ).map((opt) => (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            className={clsx(
+              "flex flex-col items-start gap-0.5 rounded-2xl border px-4 py-3 transition-all text-left",
+              mode === opt.id
+                ? "bg-[#e2cfb7] border-[#e2cfb7]"
+                : "bg-white border-[#e2e8f0] hover:border-[#e2cfb7]",
+            )}
+          >
+            <span
+              className="material-symbols-outlined text-[#1e293b] mb-1"
+              style={{ fontSize: 20 }}
+            >
+              {opt.icon}
+            </span>
+            <p className="text-[13px] font-bold text-[#1e293b]">{opt.label}</p>
+            <p className={clsx("text-[11px]", mode === opt.id ? "text-[#94a3b8]" : "text-[#64748b]")}>
+              {opt.desc}
+            </p>
+          </button>
+        ))}
       </div>
-      <div>
-        <p className="text-[13px] font-bold text-[#1e293b]">
-          {value ? "Auto-end when time is up" : "Manual end only"}
-        </p>
-        <p className="text-[11px] text-[#64748b] mt-0.5">
-          {value
-            ? "Activity closes automatically after the end time"
-            : "Activity stays active until you manually end it"}
-        </p>
-      </div>
-    </button>
+    </div>
   );
 }
 
@@ -1479,54 +1176,6 @@ function DescriptionSection({
             : "border-[rgba(226,207,183,0.4)] focus:border-[#e1cfb7] focus:ring-[rgba(226,207,183,0.3)]",
         )}
       />
-      {error && <p className="text-[11px] text-red-500 mt-1 ml-0.5">{error}</p>}
-    </div>
-  );
-}
-
-/* ── LoveDateSection ── */
-function LoveDateSection({
-  value,
-  onChange,
-  error,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  error?: string;
-}) {
-  const today = (() => {
-    const d = new Date();
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  })();
-
-  return (
-    <div>
-      <label className="text-[13px] font-semibold text-rose-600 mb-2 block ml-1">
-        💕 Appointment Date <span className="text-red-400">*</span>
-      </label>
-      <div
-        className={clsx(
-          "bg-white rounded-[14px] border px-4 py-4 flex items-center gap-3",
-          error
-            ? "border-red-400"
-            : "border-rose-200 focus-within:border-rose-400 focus-within:ring-2 focus-within:ring-rose-100",
-        )}
-      >
-        <span
-          className="material-symbols-outlined text-rose-400"
-          style={{ fontSize: 20 }}
-        >
-          diagnosis
-        </span>
-        <input
-          type="date"
-          min={today}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex-1 text-[14px] text-[#1e293b] bg-transparent outline-none"
-        />
-      </div>
       {error && <p className="text-[11px] text-red-500 mt-1 ml-0.5">{error}</p>}
     </div>
   );

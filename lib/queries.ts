@@ -229,23 +229,48 @@ export function useActivity(activityId: string) {
   });
 }
 
+type WeekdaySlotInput = Record<
+  number,
+  { label: string; startTime: string; endTime: string; maxDogs: number }[]
+>;
+
 export function useCreateActivity() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (
       body: Partial<Omit<Activity, "_id" | "userId" | "image">> & {
-        image?: File | string;
+        image?: File[];
+        weekdaySlots?: WeekdaySlotInput;
       },
     ) => {
-      const imageUrl = await uploadImage(body.image);
+      const { weekdaySlots, ...activityBody } = body;
 
-      return apiFetch<{ id: string }>("/api/activities", {
+      const result = await apiFetch<{ id: string }>("/api/activities", {
         method: "POST",
-        body: JSON.stringify({ ...body, image: imageUrl }),
+        body: JSON.stringify(activityBody),
       });
+
+      if (weekdaySlots) {
+        for (const [dayStr, slots] of Object.entries(weekdaySlots)) {
+          for (const slot of slots) {
+            await apiFetch("/api/activity-slot", {
+              method: "POST",
+              body: JSON.stringify({
+                activityId: result.id,
+                label: slot.label,
+                weekday: Number(dayStr),
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                maxDogs: slot.maxDogs,
+              }),
+            });
+          }
+        }
+      }
+
+      return result;
     },
     onSuccess: () => {
-      // Refresh the activity list after creating
       queryClient.invalidateQueries({ queryKey: keys.activities });
     },
   });
@@ -261,13 +286,15 @@ export type PetInsightsResult = {
   illustrationUrl?: string;
 };
 
-export function usePetInsights(params: {
-  breed?: string;
-  ageGroup?: string;
-  energyLevel?: PetEnergyLevel;
-  emotions?: string[];
-  behaviorTraits?: string[];
-} | null) {
+export function usePetInsights(
+  params: {
+    breed?: string;
+    ageGroup?: string;
+    energyLevel?: PetEnergyLevel;
+    emotions?: string[];
+    behaviorTraits?: string[];
+  } | null,
+) {
   return useQuery({
     queryKey: ["petInsights", params],
     queryFn: () =>
@@ -641,6 +668,7 @@ export type Activity = {
   hostType?: "personal" | "business";
   autoEnd?: boolean;
   petRequirements?: string[];
+  tags?: string[];
 };
 
 export type Pet = {

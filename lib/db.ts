@@ -92,3 +92,20 @@ export async function feedbackCol(): Promise<Collection<FeedbackDoc>> {
   const db = await getDb();
   return db.collection<FeedbackDoc>("feedback");
 }
+
+export type ActivitySlotDoc = {
+  _id?: ObjectId;
+  activityId: ObjectId;
+  label: string;
+  weekday: number;   // 0=Mon … 6=Sun
+  startTime: string; // "HH:mm"
+  endTime: string;   // "HH:mm"
+  maxDogs: number;
+  attendeesID: ObjectId[];
+  createdAt: Date;
+};
+
+export async function activitySlotsCol(): Promise<Collection<ActivitySlotDoc>> {
+  const db = await getDb();
+  return db.collection<ActivitySlotDoc>("activitySlots");
+}
