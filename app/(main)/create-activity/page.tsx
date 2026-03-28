@@ -929,6 +929,34 @@ function TitleField({
 /* ── PetRequirementsSection ── */
 const MAX_REQUIREMENTS = 6;
 
+const REQ_EMOJI: Record<string, string> = {
+  vaccine: "💉",
+  vaccination: "💉",
+  "flea & tick": "🛡️",
+  flea: "🛡️",
+  tick: "🛡️",
+  microchip: "📡",
+  "microchip verified": "📡",
+  sterilized: "✂️",
+  neutered: "✂️",
+  spayed: "✂️",
+  friendly: "🐾",
+  trained: "🎓",
+  health: "🩺",
+  insurance: "📋",
+  leash: "🦮",
+  collar: "🏷️",
+  groomed: "✨",
+};
+
+function getReqEmoji(req: string): string {
+  const key = req.toLowerCase();
+  for (const [k, emoji] of Object.entries(REQ_EMOJI)) {
+    if (key.includes(k)) return emoji;
+  }
+  return "✅";
+}
+
 function PetRequirementsSection({
   value,
   onChange,
@@ -968,12 +996,7 @@ function PetRequirementsSection({
               className="flex items-center justify-between bg-white border border-[rgba(226,207,183,0.4)] rounded-xl px-4 py-2.5"
             >
               <div className="flex items-center gap-2.5">
-                <span
-                  className="material-symbols-outlined text-[#e2cfb7]"
-                  style={{ fontSize: 16 }}
-                >
-                  check_circle
-                </span>
+                <span className="text-base leading-none">{getReqEmoji(req)}</span>
                 <p className="text-[13px] font-semibold text-[#1e293b]">
                   {req}
                 </p>

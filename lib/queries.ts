@@ -234,6 +234,24 @@ type WeekdaySlotInput = Record<
   { label: string; startTime: string; endTime: string; maxDogs: number }[]
 >;
 
+async function uploadActivityImages(files: File[]): Promise<string[]> {
+  const urls: string[] = [];
+  for (const file of files) {
+    const ext = file.name.split(".").pop();
+    const filePath = `${UploadSubDirectoryEnum.ACTIVITY_IMAGE}/${uuidv4()}.${ext}`;
+    const { signedUrl } = await apiFetch<{ signedUrl: string }>(
+      "/api/upload/signed-url",
+      {
+        method: "POST",
+        body: JSON.stringify({ fileName: filePath, type: "activity-image" }),
+      },
+    );
+    await uploadFileToSignedUrl(signedUrl, file);
+    urls.push(`${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${filePath}`);
+  }
+  return urls;
+}
+
 export function useCreateActivity() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -243,11 +261,17 @@ export function useCreateActivity() {
         weekdaySlots?: WeekdaySlotInput;
       },
     ) => {
-      const { weekdaySlots, ...activityBody } = body;
+      const { weekdaySlots, image: imageFiles, ...activityBody } = body;
+
+      const images = imageFiles?.length ? await uploadActivityImages(imageFiles) : [];
 
       const result = await apiFetch<{ id: string }>("/api/activities", {
         method: "POST",
-        body: JSON.stringify(activityBody),
+        body: JSON.stringify({
+          ...activityBody,
+          ...(images.length > 0 && { image: images[0], images }),
+          ...(weekdaySlots && { startDate: null, endDate: null }),
+        }),
       });
 
       if (weekdaySlots) {
