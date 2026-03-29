@@ -325,18 +325,15 @@ export default function ActivityDetailPage() {
       <div className="hidden md:flex flex-1 gap-8 px-8 py-8 max-w-5xl mx-auto w-full items-start">
         {/* Left column */}
         <div className="flex-1 min-w-0 flex flex-col gap-0">
-          {/* Hero image */}
-          <div
+          {/* Hero images */}
+          <HeroCarousel
+            images={activity?.images?.length ? activity.images : activity?.image ? [activity.image] : []}
+            isLove={isLove}
             className={clsx(
-              "w-full h-80 rounded-2xl bg-center bg-cover bg-no-repeat mb-6 relative overflow-hidden",
+              "w-full h-80 rounded-2xl mb-6",
               isLove && "ring-2 ring-rose-200",
             )}
-            style={{ backgroundImage: `url("${activity?.image ?? ""}")` }}
-          >
-            {isLove && (
-              <div className="absolute inset-0 bg-gradient-to-t from-rose-900/30 to-transparent" />
-            )}
-          </div>
+          />
 
           {/* Title & badges */}
           <div className="mb-6">
@@ -613,6 +610,63 @@ export default function ActivityDetailPage() {
   );
 }
 
+/* ── Hero image carousel ── */
+function HeroCarousel({
+  images,
+  isLove,
+  className,
+}: {
+  images: string[];
+  isLove?: boolean;
+  className?: string;
+}) {
+  const [index, setIndex] = useState(0);
+  if (!images.length) return null;
+  return (
+    <div className={clsx("relative overflow-hidden", className)}>
+      <div
+        className="w-full h-full bg-center bg-cover bg-no-repeat transition-all duration-300"
+        style={{ backgroundImage: `url("${images[index]}")`, minHeight: "inherit", height: "inherit" }}
+      >
+        {isLove && (
+          <div className="absolute inset-0 bg-gradient-to-t from-rose-900/30 to-transparent" />
+        )}
+      </div>
+      {images.length > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={() => setIndex((i) => (i - 1 + images.length) % images.length)}
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/50 transition"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_left</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIndex((i) => (i + 1) % images.length)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/50 transition"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
+          </button>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setIndex(i)}
+                className={clsx(
+                  "rounded-full transition-all",
+                  i === index ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50",
+                )}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ── Mobile activity content ── */
 function ActivityContent({
   activity,
@@ -623,17 +677,12 @@ function ActivityContent({
 }) {
   return (
     <div>
-      {/* Hero image */}
-      {activity?.image && (
-        <div
-          className="relative w-full min-h-72 bg-center bg-cover bg-no-repeat"
-          style={{ backgroundImage: `url("${activity.image}")` }}
-        >
-          {isLove && (
-            <div className="absolute inset-0 bg-gradient-to-t from-rose-900/30 to-transparent" />
-          )}
-        </div>
-      )}
+      {/* Hero images */}
+      <HeroCarousel
+        images={activity?.images?.length ? activity.images : activity?.image ? [activity.image] : []}
+        isLove={isLove}
+        className="relative w-full min-h-72"
+      />
 
       {/* Title & badges */}
       <div className="px-4 py-6">

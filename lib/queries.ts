@@ -692,6 +692,7 @@ export type Activity = {
   amountOfAttendees: number;
   maxDogs: number;
   image?: string;
+  images?: string[];
   status: "active" | "ended";
   hostId: string;
   attendees: Attendee[];
