@@ -812,10 +812,11 @@ function UserAction({
     }
   });
 
+  const isPersonal = activity?.hostType === "personal";
   const joinedCount =
     activity?.attendees?.filter((a) => a.status === "joined").length ?? 0;
   const isFull = !!activity?.maxDogs && joinedCount >= activity.maxDogs;
-  const hasSelectedDate = !!selectedStartDate;
+  const hasSelectedDate = isPersonal || !!selectedStartDate;
 
   const buttonDisabled =
     isDisable || !hasSelectedDate || isFull || isPending || isJoined;
@@ -854,15 +855,17 @@ function UserAction({
 
   return (
     <>
-      <DateRangeCalendar
-        isSingleDate={activity?.type === "grooming"}
-        startDate={selectedStartDate}
-        endDate={selectedEndDate}
-        onStartChange={setSelectedStartDate}
-        onEndChange={setSelectedEndDate}
-        label="Pick a Date & Time"
-        attendeesByDate={attendeesByDate}
-      />
+      {!isPersonal && (
+        <DateRangeCalendar
+          isSingleDate={activity?.type === "grooming"}
+          startDate={selectedStartDate}
+          endDate={selectedEndDate}
+          onStartChange={setSelectedStartDate}
+          onEndChange={setSelectedEndDate}
+          label="Pick a Date & Time"
+          attendeesByDate={attendeesByDate}
+        />
+      )}
       <Tooltip
         className="w-full mt-4"
         label={tooltipLabel}

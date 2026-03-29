@@ -38,15 +38,17 @@ export default function MemberIdentity({
         {member.bio}
       </p>
       <div className="w-full flex gap-4 justify-center">
-        <button
-          className="mt-4 bg-[rgba(226,207,183,0.2)] border w-full border-[#e2cfb7] text-[#1e293b] max-w-90 font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform hover:bg-[rgba(226,207,183,0.35)]"
-          onClick={onEdit}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-            edit
-          </span>
-          Edit Profile
-        </button>
+        {onEdit && (
+          <button
+            className="mt-4 bg-[rgba(226,207,183,0.2)] border w-full border-[#e2cfb7] text-[#1e293b] max-w-90 font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform hover:bg-[rgba(226,207,183,0.35)]"
+            onClick={onEdit}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+              edit
+            </span>
+            Edit Profile
+          </button>
+        )}
         {enableAddPet && (
           <button
             className="mt-4 bg-[rgba(226,207,183,0.2)] border w-full border-[#e2cfb7] text-[#1e293b] max-w-90 font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform hover:bg-[rgba(226,207,183,0.35)]"
