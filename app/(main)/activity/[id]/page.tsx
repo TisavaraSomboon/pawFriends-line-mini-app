@@ -1074,18 +1074,27 @@ function HostActions({
         </div>
       )}
 
-      <button
-        className={clsx(
-          "w-full h-14 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm active:scale-[0.98]",
-          isLove ? "bg-rose-500" : "bg-[#1e293b]",
-        )}
-        onClick={() => setShowEndConfirm(true)}
-      >
-        <span className="material-symbols-outlined">
-          {isLove ? "heart_broken" : "pets"}
-        </span>
-        {isLove ? "End Match" : "End Activity"}
-      </button>
+      <div className="flex gap-2">
+        <button
+          className="flex-1 h-14 bg-white border-2 border-[#e2cfb7] text-[#1e293b] font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[rgba(226,207,183,0.15)] transition-all active:scale-[0.98]"
+          onClick={() => router.push(`/activity/edit/${activityId}`)}
+        >
+          <span className="material-symbols-outlined">edit</span>
+          Edit
+        </button>
+        <button
+          className={clsx(
+            "flex-1 h-14 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm active:scale-[0.98]",
+            isLove ? "bg-rose-500" : "bg-[#1e293b]",
+          )}
+          onClick={() => setShowEndConfirm(true)}
+        >
+          <span className="material-symbols-outlined">
+            {isLove ? "heart_broken" : "pets"}
+          </span>
+          {isLove ? "End Match" : "End Activity"}
+        </button>
+      </div>
 
       <ConfirmModal
         open={showEndConfirm}
