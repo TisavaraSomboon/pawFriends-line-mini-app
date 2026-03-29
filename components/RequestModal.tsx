@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import clsx from "clsx";
 import type { Pet } from "@/lib/queries";
@@ -93,11 +94,11 @@ export default function RequestModal({
   const pct = compatibility?.score ?? getCompatibility(selectedPet);
   const color = isLove ? "#f43f5e" : getCompatibilityColor(pct);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-9998 flex justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-150 items-center"
+      className="fixed inset-0 z-[9998] flex justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-150 items-center"
       onClick={onCancel}
     >
       <div
@@ -328,6 +329,7 @@ export default function RequestModal({
           </button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
