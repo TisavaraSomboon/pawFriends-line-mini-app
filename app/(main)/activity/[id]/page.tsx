@@ -21,6 +21,7 @@ import { useToast } from "@/components/Toast";
 import clsx from "clsx";
 import Tooltip from "@/components/Tooltip";
 import ConfirmModal from "@/components/ConfirmModal";
+import DateRangeCalendar from "@/components/DateRangeCalendar";
 
 const FALLBACK_AVATAR =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuBuzALWachO_YIj8n2rR-FLfaEYVj3LhYbo9hEjMEUR56kinTG63BRNgCKCr2UY94D71unYWxE4HXlvQwfOO6iH5U14SS6xGwZ_t0JPr2LaSWERa91zC5xmVFEP1EPhKdJ8RdW5EyNIgXqHO7I6fzubsaAgzj3wVnSlk40Xx5Gytefc7WB8s58QJOPu9U94Y_MWJX_HM2WRhjYJkQs6lMuDySUnFmGBw_Wn7XDJFOAxscL2Izuf3UznPYuNQVRv0x5nqBzhRT1i-uJ3";
@@ -407,33 +408,35 @@ export default function ActivityDetailPage() {
                 chevron_right
               </span>
             </div>
-            <div className="flex items-center gap-4 px-5 py-4">
-              <div
-                className={clsx(
-                  "w-11 h-11 flex items-center justify-center rounded-xl shrink-0",
-                  isLove ? "bg-rose-100" : "bg-[rgba(226,207,183,0.3)]",
-                )}
-              >
-                <span
+            {activity?.startDate && (
+              <div className="flex items-center gap-4 px-5 py-4">
+                <div
                   className={clsx(
-                    "material-symbols-outlined",
-                    isLove ? "text-rose-500" : "text-[#1e293b]",
+                    "w-11 h-11 flex items-center justify-center rounded-xl shrink-0",
+                    isLove ? "bg-rose-100" : "bg-[rgba(226,207,183,0.3)]",
                   )}
                 >
-                  calendar_today
-                </span>
+                  <span
+                    className={clsx(
+                      "material-symbols-outlined",
+                      isLove ? "text-rose-500" : "text-[#1e293b]",
+                    )}
+                  >
+                    calendar_today
+                  </span>
+                </div>
+                <div>
+                  <p className="text-[15px] font-semibold text-[#1e293b]">
+                    {dayjs(activity?.startDate).format("dddd, MMM D")}
+                  </p>
+                  <p className="text-[13px] text-[#64748b]">
+                    {isLove
+                      ? "All day appointment"
+                      : `${dayjs(activity?.startDate).format("hh:mm A")} – ${dayjs(activity?.endDate).format("hh:mm A")}`}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-[15px] font-semibold text-[#1e293b]">
-                  {dayjs(activity?.startDate).format("dddd, MMM D")}
-                </p>
-                <p className="text-[13px] text-[#64748b]">
-                  {isLove
-                    ? "All day appointment"
-                    : `${dayjs(activity?.startDate).format("hh:mm A")} – ${dayjs(activity?.endDate).format("hh:mm A")}`}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* About */}
@@ -837,8 +840,15 @@ function UserAction({
 
   return (
     <>
+      <DateRangeCalendar
+        isSingleDate={true}
+        startDate=""
+        endDate=""
+        onEndChange={() => {}}
+        onStartChange={() => {}}
+      />
       <Tooltip
-        className="w-full"
+        className="w-full mt-4"
         label="You need to add at least 1 pet to join this activity."
         isDisable={!isDisable}
       >
@@ -926,6 +936,13 @@ function HostActions({
 
   return (
     <div className="flex flex-col gap-3">
+      <DateRangeCalendar
+        isSingleDate={true}
+        startDate=""
+        endDate=""
+        onEndChange={() => {}}
+        onStartChange={() => {}}
+      />
       <button
         onClick={() => setShowRequests(!showRequests)}
         className={clsx(
@@ -1049,7 +1066,11 @@ function HostActions({
             : "Are you sure you want to end this activity? This action cannot be undone."
         }
         confirmLabel={isLove ? "End Match" : "End Activity"}
-        confirmClassName={isLove ? "bg-rose-500 text-white hover:bg-rose-600" : "bg-[#1e293b] text-white hover:bg-[#0f172a]"}
+        confirmClassName={
+          isLove
+            ? "bg-rose-500 text-white hover:bg-rose-600"
+            : "bg-[#1e293b] text-white hover:bg-[#0f172a]"
+        }
         icon={
           <span className="material-symbols-outlined text-2xl text-[#64748b]">
             {isLove ? "heart_broken" : "pets"}
