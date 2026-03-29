@@ -146,18 +146,33 @@ export default function ActivityCard({
 
               {/* Time + spots */}
               <div className="flex flex-col gap-0.5 text-[#64748b] text-[11px] mb-2">
-                <div className="flex gap-1 items-center">
-                  <span
-                    className={clsx(
-                      "material-symbols-outlined",
-                      isLove && "text-rose-400",
-                    )}
-                    style={{ fontSize: 12 }}
-                  >
-                    {isLove ? "calendar_today" : "schedule"}
-                  </span>
-                  <span className="truncate">{startTime}</span>
-                </div>
+                {startTime ? (
+                  <div className="flex gap-1 items-center">
+                    <span
+                      className={clsx(
+                        "material-symbols-outlined",
+                        isLove && "text-rose-400",
+                      )}
+                      style={{ fontSize: 12 }}
+                    >
+                      {isLove ? "calendar_today" : "schedule"}
+                    </span>
+                    <span className="truncate">{startTime}</span>
+                  </div>
+                ) : (
+                  <div className="flex gap-1 items-center">
+                    <span
+                      className={clsx(
+                        "material-symbols-outlined",
+                        isLove && "text-rose-400",
+                      )}
+                      style={{ fontSize: 12 }}
+                    >
+                      cases
+                    </span>
+                    Business
+                  </div>
+                )}
                 {!!spotLeft && (
                   <div className="flex gap-1 items-center text-red-600">
                     <span
