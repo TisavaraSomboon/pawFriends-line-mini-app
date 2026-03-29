@@ -234,7 +234,7 @@ type WeekdaySlotInput = Record<
   { label: string; startTime: string; endTime: string; maxDogs: number }[]
 >;
 
-async function uploadActivityImages(files: File[]): Promise<string[]> {
+export async function uploadActivityImages(files: File[]): Promise<string[]> {
   const urls: string[] = [];
   for (const file of files) {
     const ext = file.name.split(".").pop();

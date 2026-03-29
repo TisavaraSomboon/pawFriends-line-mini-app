@@ -8,6 +8,7 @@ import {
   PetSizeCategory,
   useActivity,
   useUpdateActivity,
+  uploadActivityImages,
 } from "@/lib/queries";
 import { useToast } from "@/components/Toast";
 import { useParams, useRouter } from "next/navigation";
@@ -175,15 +176,24 @@ export default function EditActivityPage() {
 
   const allTypes = isBusiness ? BUSINESS_ACTIVITY_TYPES : PERSONAL_ACTIVITY_TYPES;
 
-  const onSubmit = ({
+  const onSubmit = async ({
     dogLimit,
     customType,
     autoEnd,
     petRequirements,
+    image: _image,
     ...data
   }: ActivityForm) => {
     const resolvedType =
       data.type === "custom" ? customType.trim() || "custom" : data.type;
+
+    // Upload new cover image if one was selected, otherwise keep existing URL
+    let image: string | undefined =
+      typeof _image === "string" ? _image : undefined;
+    if (coverFiles.length > 0) {
+      const urls = await uploadActivityImages(coverFiles);
+      if (urls[0]) image = urls[0];
+    }
 
     updateActivity(
       {
@@ -192,6 +202,7 @@ export default function EditActivityPage() {
         autoEnd,
         petRequirements,
         amountOfAttendees: dogLimit,
+        ...(image && { image }),
         startDate: data.startDate ? new Date(data.startDate) : undefined,
         endDate: data.endDate ? new Date(data.endDate) : undefined,
         latitude: data.latitude ?? undefined,
