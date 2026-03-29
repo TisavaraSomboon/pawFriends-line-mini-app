@@ -73,7 +73,9 @@ export default function RequestModal({
   const isLove = activityType === "love";
   const eligiblePets = isLove ? pets.filter((p) => !p.sterilizing) : pets;
 
-  const [selectedId, setSelectedId] = useState<string>(eligiblePets[0]?._id ?? "");
+  const [selectedId, setSelectedId] = useState<string>(
+    eligiblePets[0]?._id ?? "",
+  );
   const [message, setMessage] = useState("");
 
   const selectedPet = eligiblePets.find((p) => p._id === selectedId);
@@ -110,14 +112,18 @@ export default function RequestModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ── */}
-        <header className={clsx(
-          "flex items-center px-4 pt-4 pb-2 justify-between shrink-0",
-          isLove ? "bg-rose-50" : "bg-[#f7f7f6]",
-        )}>
-          <h2 className={clsx(
-            "text-lg font-bold leading-tight tracking-tight flex-1 text-center",
-            isLove ? "text-rose-600" : "text-[#1e293b]",
-          )}>
+        <header
+          className={clsx(
+            "flex items-center px-4 pt-4 pb-2 justify-between shrink-0",
+            isLove ? "bg-rose-50" : "bg-[#f7f7f6]",
+          )}
+        >
+          <h2
+            className={clsx(
+              "text-lg font-bold leading-tight tracking-tight flex-1 text-center",
+              isLove ? "text-rose-600" : "text-[#1e293b]",
+            )}
+          >
             {isLove ? "💕 Find a Match" : "Join Activity"}
           </h2>
         </header>
@@ -126,8 +132,15 @@ export default function RequestModal({
         <div className="flex-1 overflow-y-auto">
           {/* Section title */}
           <div className="px-4 pt-2 pb-4">
-            <h3 className={clsx("text-xl font-bold tracking-tight", isLove ? "text-rose-700" : "text-[#1e293b]")}>
-              {isLove ? "Which dog is looking for love?" : "Which dog is joining?"}
+            <h3
+              className={clsx(
+                "text-xl font-bold tracking-tight",
+                isLove ? "text-rose-700" : "text-[#1e293b]",
+              )}
+            >
+              {isLove
+                ? "Which dog is looking for love?"
+                : "Which dog is joining?"}
             </h3>
             <p className="text-[#64748b] text-sm mt-1">
               {isLove
@@ -171,8 +184,18 @@ export default function RequestModal({
                       className="size-16 rounded-lg object-cover shrink-0 bg-[#e1cfb7]/10"
                     />
                   ) : (
-                    <div className={clsx("size-16 rounded-lg flex items-center justify-center shrink-0", isLove ? "bg-rose-100" : "bg-[#e1cfb7]/20")}>
-                      <span className={clsx("material-symbols-outlined text-[28px]", isLove ? "text-rose-400" : "text-[#c4a87a]")}>
+                    <div
+                      className={clsx(
+                        "size-16 rounded-lg flex items-center justify-center shrink-0",
+                        isLove ? "bg-rose-100" : "bg-[#e1cfb7]/20",
+                      )}
+                    >
+                      <span
+                        className={clsx(
+                          "material-symbols-outlined text-[28px]",
+                          isLove ? "text-rose-400" : "text-[#c4a87a]",
+                        )}
+                      >
                         pets
                       </span>
                     </div>
@@ -186,8 +209,15 @@ export default function RequestModal({
                     <p className="text-[#64748b] text-sm">
                       {pet.breed ?? "Mixed"} • {pet.size ?? "—"}
                     </p>
-                    <div className={clsx("mt-1 flex items-center gap-1 text-xs font-medium", badge.colorClass)}>
-                      <span className="material-symbols-outlined text-xs leading-none">{badge.icon}</span>
+                    <div
+                      className={clsx(
+                        "mt-1 flex items-center gap-1 text-xs font-medium",
+                        badge.colorClass,
+                      )}
+                    >
+                      <span className="material-symbols-outlined text-xs leading-none">
+                        {badge.icon}
+                      </span>
                       {badge.label}
                     </div>
                   </div>
@@ -217,31 +247,48 @@ export default function RequestModal({
             })}
           </div>
 
-          {isCompatibilityLoading && (
+          {eligiblePets.length !== 0 && isCompatibilityLoading && (
             <SpinLoader title="Loading Compatibility" />
           )}
           {/* ── Compatibility panel ── */}
           {selectedPet && compatibility && (
-            <div className={clsx(
-              "mx-4 mt-6 mb-6 p-6 rounded-2xl bg-white shadow-sm border",
-              isLove ? "border-rose-200" : "border-[#e1cfb7]/10",
-            )}>
+            <div
+              className={clsx(
+                "mx-4 mt-6 mb-6 p-6 rounded-2xl bg-white shadow-sm border",
+                isLove ? "border-rose-200" : "border-[#e1cfb7]/10",
+              )}
+            >
               <div className="flex items-center gap-4">
-                <div className={clsx("flex size-12 shrink-0 items-center justify-center rounded-full", isLove ? "bg-rose-100" : "bg-[#e1cfb7]/20")}>
-                  <span className={clsx(
-                    "material-symbols-outlined text-2xl",
-                    isLove ? "text-rose-400" : "text-[#c4a87a]",
-                    isCompatibilityLoading && "animate-pulse",
-                  )}>
+                <div
+                  className={clsx(
+                    "flex size-12 shrink-0 items-center justify-center rounded-full",
+                    isLove ? "bg-rose-100" : "bg-[#e1cfb7]/20",
+                  )}
+                >
+                  <span
+                    className={clsx(
+                      "material-symbols-outlined text-2xl",
+                      isLove ? "text-rose-400" : "text-[#c4a87a]",
+                      isCompatibilityLoading && "animate-pulse",
+                    )}
+                  >
                     {isLove ? "favorite" : "psychology"}
                   </span>
                 </div>
                 <div className="flex flex-col">
-                  <p className={clsx("text-sm font-bold", isLove ? "text-rose-600" : "text-[#1e293b]")}>
+                  <p
+                    className={clsx(
+                      "text-sm font-bold",
+                      isLove ? "text-rose-600" : "text-[#1e293b]",
+                    )}
+                  >
                     {isLove ? "Love Compatibility" : "Compatibility"}
                   </p>
                   <p className="text-[#64748b] text-xs">
-                    {compatibility?.reason ?? (isLove ? "Breed · Health · Personality" : "Breed · Vaccine · Flea & Tick")}
+                    {compatibility?.reason ??
+                      (isLove
+                        ? "Breed · Health · Personality"
+                        : "Breed · Vaccine · Flea & Tick")}
                   </p>
                 </div>
               </div>
@@ -268,14 +315,24 @@ export default function RequestModal({
                     { label: "Vaccine", ok: !!selectedPet.vaccine },
                     { label: "Flea & Tick", ok: !!selectedPet.fleaTick },
                   ].map(({ label, ok }) => (
-                    <div key={label} className="flex items-center gap-1 text-[10px] font-semibold">
+                    <div
+                      key={label}
+                      className="flex items-center gap-1 text-[10px] font-semibold"
+                    >
                       <span
                         className="material-symbols-outlined"
-                        style={{ fontSize: 12, color: ok ? "#4ade80" : "#f97316" }}
+                        style={{
+                          fontSize: 12,
+                          color: ok ? "#4ade80" : "#f97316",
+                        }}
                       >
                         {ok ? "check_circle" : "cancel"}
                       </span>
-                      <span className={ok ? "text-[#475569]" : "text-[#f97316]"}>{label}</span>
+                      <span
+                        className={ok ? "text-[#475569]" : "text-[#f97316]"}
+                      >
+                        {label}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -290,7 +347,11 @@ export default function RequestModal({
                       rows={3}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder={isLove ? "Tell them why your dog would be a great match…" : "Tell the host why your dog would be a great fit…"}
+                      placeholder={
+                        isLove
+                          ? "Tell them why your dog would be a great match…"
+                          : "Tell the host why your dog would be a great fit…"
+                      }
                       className={clsx(
                         "w-full rounded-xl border bg-[#f7f7f6] px-3 py-2 text-[13px] text-[#1e293b] placeholder-[#94a3b8] outline-none resize-none",
                         isLove
@@ -306,19 +367,33 @@ export default function RequestModal({
         </div>
 
         {/* ── Footer ── */}
-        <footer className={clsx(
-          "shrink-0 p-4 backdrop-blur-md border-t",
-          isLove ? "bg-rose-50/80 border-rose-200/40" : "bg-[#f7f7f6]/80 border-[#e1cfb7]/20",
-        )}>
+        <footer
+          className={clsx(
+            "shrink-0 p-4 backdrop-blur-md border-t",
+            isLove
+              ? "bg-rose-50/80 border-rose-200/40"
+              : "bg-[#f7f7f6]/80 border-[#e1cfb7]/20",
+          )}
+        >
           <button
-            onClick={() => selectedId && onConfirm(selectedId, message || undefined)}
-            disabled={isCompatibilityLoading || !compatibility || (pct < 90 && !message) || eligiblePets.length === 0}
+            onClick={() =>
+              selectedId && onConfirm(selectedId, message || undefined)
+            }
+            disabled={
+              isCompatibilityLoading ||
+              !compatibility ||
+              (pct < 90 && !message) ||
+              eligiblePets.length === 0
+            }
             className={clsx(
               "w-full font-bold py-4 rounded-xl shadow-lg hover:scale-[0.98] active:scale-[0.95] transition-all disabled:opacity-50 disabled:pointer-events-none",
               isLove
                 ? "bg-rose-500 text-white shadow-rose-200"
                 : "bg-[#e1cfb7] text-[#1e293b] shadow-[#e1cfb7]/20",
-              { "opacity-50 pointer-events-none": !isCompatibilityLoading && !compatibility },
+              {
+                "opacity-50 pointer-events-none":
+                  !isCompatibilityLoading && !compatibility,
+              },
             )}
           >
             {isLove
