@@ -128,6 +128,8 @@ export default function ActivityDetailPage() {
   const actionPanel = isHost ? (
     <HostActions
       attendees={requestAttendees}
+      allAttendees={activity?.attendees ?? []}
+      activityId={id}
       showRequests={showRequests}
       setShowRequests={setShowRequests}
       onEnded={() => endedActivity()}
@@ -919,32 +921,59 @@ function UserAction({
 /* ── Host actions ── */
 function HostActions({
   attendees,
+  allAttendees,
+  activityId,
   showRequests,
   setShowRequests,
   onEnded,
   isLove,
 }: {
   attendees: Attendee[];
+  allAttendees: Attendee[];
+  activityId: string;
   showRequests: boolean;
   setShowRequests: (v: boolean) => void;
   onEnded: () => void;
   isLove?: boolean;
 }) {
+  const router = useRouter();
   const { toast } = useToast();
   const { mutate: updateAttendee } = useUpdateAttendee();
   const [showEndConfirm, setShowEndConfirm] = useState(false);
 
+  // Build mock attendees-by-date: distribute joined attendees across nearby days
+  const joined = allAttendees.filter((a) => a.status === "joined");
+  const attendeesByDate: Record<string, { image: string; name: string }[]> = {};
+  const offsets = [0, -1, 1, -2, 2, -3];
+  offsets.forEach((offset, idx) => {
+    const chunk = joined.slice(idx * 3, idx * 3 + 3);
+    if (chunk.length > 0) {
+      const dateKey = dayjs().add(offset, "day").format("YYYY-MM-DD");
+      attendeesByDate[dateKey] = chunk.map((a) => ({
+        image: a.image,
+        name: a.name,
+      }));
+    }
+  });
+
   return (
     <div className="flex flex-col gap-3">
       <DateRangeCalendar
-        isSingleDate={true}
+        readOnly
         startDate=""
         endDate=""
         onEndChange={() => {}}
         onStartChange={() => {}}
+        label="Attendance Calendar"
+        attendeesByDate={attendeesByDate}
+        onDayClick={(dateKey) =>
+          router.push(
+            `/activity/attendeesDetails?activityId=${activityId}&date=${dateKey}`,
+          )
+        }
       />
       <button
-        onClick={() => setShowRequests(!showRequests)}
+        onClick={() => router.push(`/activity/attendeesDetails?activityId=${activityId}`)}
         className={clsx(
           "w-full h-14 bg-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]",
           isLove
@@ -953,9 +982,7 @@ function HostActions({
         )}
       >
         <span className="material-symbols-outlined">person_add</span>
-        {showRequests
-          ? "Hide Requests"
-          : `Manage Requests (${attendees.length ?? 0})`}
+        Manage Requests ({attendees.length ?? 0})
       </button>
 
       {showRequests && (

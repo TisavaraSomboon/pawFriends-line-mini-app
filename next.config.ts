@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.pexels.com",
       },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
     ],
     // Cache optimized images for 7 days on the CDN/browser
     minimumCacheTTL: 60 * 60 * 24 * 7,

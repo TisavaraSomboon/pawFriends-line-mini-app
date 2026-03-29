@@ -1,7 +1,10 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import dayjs from "dayjs";
 import { clsx } from "clsx";
+
+type AttendeeAvatar = { image: string; name: string };
 
 type Props = {
   startDate: string; // "YYYY-MM-DDTHH:mm"
@@ -10,6 +13,10 @@ type Props = {
   onEndChange: (v: string) => void;
   label?: string;
   isSingleDate?: boolean;
+  // read-only attendance view
+  attendeesByDate?: Record<string, AttendeeAvatar[]>;
+  onDayClick?: (dateKey: string) => void;
+  readOnly?: boolean;
 };
 
 export default function DateRangeCalendar({
@@ -19,6 +26,9 @@ export default function DateRangeCalendar({
   onEndChange,
   label = "Date & Time",
   isSingleDate = false,
+  attendeesByDate,
+  onDayClick,
+  readOnly = false,
 }: Props) {
   const [month, setMonth] = useState(dayjs().startOf("month"));
   const [selectingEnd, setSelectingEnd] = useState(false);
@@ -62,16 +72,18 @@ export default function DateRangeCalendar({
 
   return (
     <div>
-      <label className="text-[13px] font-semibold text-[#334155] mb-2 block ml-1">
-        {label} <span className="text-red-400">*</span>
-      </label>
+      {label && (
+        <label className="text-[13px] font-semibold text-[#334155] mb-2 block ml-1">
+          {label} {!readOnly && <span className="text-red-400">*</span>}
+        </label>
+      )}
       <div className="bg-white rounded-[14px] border border-[rgba(226,207,183,0.4)] overflow-hidden">
         {/* Month nav */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(226,207,183,0.3)]">
           <button
             type="button"
             onClick={() => setMonth((m) => m.subtract(1, "month"))}
-            disabled={month.isSame(dayjs().startOf("month"), "month")}
+            disabled={!readOnly && month.isSame(dayjs().startOf("month"), "month")}
             className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[rgba(226,207,183,0.2)] disabled:opacity-30 transition-colors"
           >
             <span className="material-symbols-outlined text-[#1e293b]" style={{ fontSize: 18 }}>
@@ -93,7 +105,7 @@ export default function DateRangeCalendar({
         </div>
 
         {/* Selection hint */}
-        {!isSingleDate && (
+        {!isSingleDate && !readOnly && (
           <p className="text-[11px] text-[#94a3b8] text-center pt-2">
             {selectingEnd ? "Tap to set end date" : "Tap to set start date"}
           </p>
@@ -119,90 +131,146 @@ export default function DateRangeCalendar({
             const isInRange =
               !isSingleDate && !!startDay && !!endDay && dateKey > startDay && dateKey < endDay;
             const isSelected = isSingleDate ? isStart : isStart || isEnd;
+            const isToday = day.isSame(today, "day");
+
+            const dateAttendees = attendeesByDate?.[dateKey] ?? [];
+            const hasAttendees = dateAttendees.length > 0;
 
             return (
               <button
                 key={dateKey}
                 type="button"
-                disabled={isPast}
-                onClick={() => handleDayClick(dateKey)}
+                disabled={readOnly ? false : isPast}
+                onClick={() => {
+                  if (readOnly) {
+                    if (hasAttendees) onDayClick?.(dateKey);
+                  } else {
+                    handleDayClick(dateKey);
+                  }
+                }}
                 className={clsx(
-                  "flex flex-col items-center justify-center rounded-xl h-10 gap-0.5 transition-all",
-                  isPast && "opacity-30 cursor-not-allowed",
-                  isSelected && "bg-[#1e293b]",
-                  isInRange && !isSelected && "bg-[rgba(226,207,183,0.35)]",
-                  !isSelected && !isInRange && !isPast && "hover:bg-[rgba(226,207,183,0.15)]",
+                  "flex flex-col items-center justify-center rounded-xl gap-0.5 transition-all",
+                  readOnly ? "h-14" : "h-10",
+                  !readOnly && isPast && "opacity-30 cursor-not-allowed",
+                  !readOnly && isSelected && "bg-[#1e293b]",
+                  !readOnly && isInRange && !isSelected && "bg-[rgba(226,207,183,0.35)]",
+                  !readOnly && !isSelected && !isInRange && !isPast && "hover:bg-[rgba(226,207,183,0.15)]",
+                  readOnly && hasAttendees && "hover:bg-[rgba(226,207,183,0.15)] cursor-pointer",
+                  readOnly && !hasAttendees && "cursor-default",
+                  readOnly && isToday && "ring-1 ring-[rgba(226,207,183,0.6)] rounded-xl",
                 )}
               >
                 <p
                   className={clsx(
                     "text-[13px] font-bold leading-none",
-                    isSelected ? "text-white" : "text-[#1e293b]",
+                    !readOnly && isSelected ? "text-white" : "text-[#1e293b]",
+                    readOnly && isToday && !hasAttendees && "text-[#e2cfb7]",
                   )}
                 >
                   {day.date()}
                 </p>
-                <div className="text-[9px] font-bold text-[#e2cfb7] leading-none">
-                  {!isSingleDate && isSelected
-                    ? (isStart && isEnd ? "S/E" : isStart ? "S" : "E")
-                    : " "}
-                </div>
+
+                {readOnly ? (
+                  hasAttendees ? (
+                    <div className="flex -space-x-1 mt-0.5">
+                      {dateAttendees.slice(0, 2).map((a, idx) => (
+                        <div
+                          key={idx}
+                          className="w-4 h-4 rounded-full border border-white overflow-hidden bg-[#e2cfb7] shrink-0"
+                        >
+                          {a.image ? (
+                            <Image
+                              src={a.image}
+                              alt={a.name}
+                              width={16}
+                              height={16}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <span className="text-[6px] font-bold text-[#1e293b]">
+                                {a.name?.[0]?.toUpperCase() ?? "?"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {dateAttendees.length > 2 && (
+                        <div className="w-4 h-4 rounded-full bg-[#1e293b] flex items-center justify-center border border-white shrink-0">
+                          <span className="text-[7px] font-bold text-white">
+                            +{dateAttendees.length - 2}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="h-4" />
+                  )
+                ) : (
+                  <div className="text-[9px] font-bold text-[#e2cfb7] leading-none">
+                    {!isSingleDate && isSelected
+                      ? isStart && isEnd ? "S/E" : isStart ? "S" : "E"
+                      : " "}
+                  </div>
+                )}
               </button>
             );
           })}
         </div>
 
-        {/* Time inputs */}
-        <div className="border-t border-[rgba(226,207,183,0.3)] px-4 py-3 flex flex-col gap-3">
-          <div className={clsx("grid gap-3", isSingleDate ? "grid-cols-1" : "grid-cols-2")}>
-            <div>
-              <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide mb-1.5">
-                {isSingleDate ? "Time" : "Start Time"}
-              </p>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => {
-                  const day = startDay || dayjs().format("YYYY-MM-DD");
-                  onStartChange(`${day}T${e.target.value}`);
-                  if (isSingleDate) onEndChange(`${day}T${e.target.value}`);
-                }}
-                className="w-full h-10 rounded-lg border border-[rgba(226,207,183,0.4)] bg-white px-3 text-[13px] text-[#1e293b] outline-none focus:border-[#e1cfb7]"
-              />
-            </div>
-            {!isSingleDate && (
+        {/* Time inputs — hidden in readOnly mode */}
+        {!readOnly && (
+          <div className="border-t border-[rgba(226,207,183,0.3)] px-4 py-3 flex flex-col gap-3">
+            <div className={clsx("grid gap-3", isSingleDate ? "grid-cols-1" : "grid-cols-2")}>
               <div>
                 <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide mb-1.5">
-                  End Time
+                  {isSingleDate ? "Time" : "Start Time"}
                 </p>
                 <input
                   type="time"
-                  value={endTime}
-                  onChange={(e) =>
-                    onEndChange(`${endDay || startDay || dayjs().format("YYYY-MM-DD")}T${e.target.value}`)
-                  }
+                  value={startTime}
+                  onChange={(e) => {
+                    const day = startDay || dayjs().format("YYYY-MM-DD");
+                    onStartChange(`${day}T${e.target.value}`);
+                    if (isSingleDate) onEndChange(`${day}T${e.target.value}`);
+                  }}
                   className="w-full h-10 rounded-lg border border-[rgba(226,207,183,0.4)] bg-white px-3 text-[13px] text-[#1e293b] outline-none focus:border-[#e1cfb7]"
                 />
               </div>
-            )}
-          </div>
-          {startDay && (isSingleDate || endDay) && (
-            <div className="flex items-center justify-between text-[12px] font-semibold text-[#64748b] bg-[#f8fafc] rounded-lg px-3 py-2">
-              <span>{dayjs(startDay).format("D MMM")} · {startTime}</span>
               {!isSingleDate && (
-                <>
-                  <span
-                    className="material-symbols-outlined text-[#94a3b8]"
-                    style={{ fontSize: 14 }}
-                  >
-                    arrow_forward
-                  </span>
-                  <span>{dayjs(endDay).format("D MMM")} · {endTime}</span>
-                </>
+                <div>
+                  <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide mb-1.5">
+                    End Time
+                  </p>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) =>
+                      onEndChange(`${endDay || startDay || dayjs().format("YYYY-MM-DD")}T${e.target.value}`)
+                    }
+                    className="w-full h-10 rounded-lg border border-[rgba(226,207,183,0.4)] bg-white px-3 text-[13px] text-[#1e293b] outline-none focus:border-[#e1cfb7]"
+                  />
+                </div>
               )}
             </div>
-          )}
-        </div>
+            {startDay && (isSingleDate || endDay) && (
+              <div className="flex items-center justify-between text-[12px] font-semibold text-[#64748b] bg-[#f8fafc] rounded-lg px-3 py-2">
+                <span>{dayjs(startDay).format("D MMM")} · {startTime}</span>
+                {!isSingleDate && (
+                  <>
+                    <span
+                      className="material-symbols-outlined text-[#94a3b8]"
+                      style={{ fontSize: 14 }}
+                    >
+                      arrow_forward
+                    </span>
+                    <span>{dayjs(endDay).format("D MMM")} · {endTime}</span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
