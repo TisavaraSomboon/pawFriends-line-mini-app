@@ -77,6 +77,8 @@ export async function GET(
                 requestMessage: "$requestMessage",
                 ownerId: "$profile.ownerId",
                 attendeeId: "$attendeeId",
+                startDate: "$startDate",
+                endDate: "$endDate",
               },
             },
           ],

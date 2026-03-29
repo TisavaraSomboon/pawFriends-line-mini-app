@@ -10,7 +10,6 @@ import {
   Pet,
   PetSizeCategory,
   useActivity,
-  useAttendees,
   useCreateAttendees,
   useEndActivity,
   useProfile,
@@ -796,15 +795,13 @@ function UserAction({
   onAttendeeJoin: () => void;
 }) {
   const { mutate: createAttendee } = useCreateAttendees();
-  const [selectedDateTime, setSelectedDateTime] = useState("");
+  const [selectedStartDate, setSelectedStartDate] = useState("");
+  const [selectedEndDate, setSelectedEndDate] = useState("");
 
-  const { data: attendeesData } = useAttendees(activity?._id ?? "");
   const joinedCount =
-    (attendeesData as unknown as Attendee[])?.filter(
-      (a) => a.status === "joined",
-    ).length ?? 0;
+    activity?.attendees?.filter((a) => a.status === "joined").length ?? 0;
   const isFull = !!activity?.maxDogs && joinedCount >= activity.maxDogs;
-  const hasSelectedDate = !!selectedDateTime;
+  const hasSelectedDate = !!selectedStartDate;
 
   const buttonDisabled =
     isDisable || !hasSelectedDate || isFull || isPending || isJoined;
@@ -844,11 +841,11 @@ function UserAction({
   return (
     <>
       <DateRangeCalendar
-        isSingleDate={true}
-        startDate={selectedDateTime}
-        endDate={selectedDateTime}
-        onStartChange={setSelectedDateTime}
-        onEndChange={setSelectedDateTime}
+        isSingleDate={activity?.type === "grooming"}
+        startDate={selectedStartDate}
+        endDate={selectedEndDate}
+        onStartChange={setSelectedStartDate}
+        onEndChange={setSelectedEndDate}
         label="Pick a Date & Time"
       />
       <Tooltip
@@ -894,7 +891,8 @@ function UserAction({
               !activity?.sizes?.length ||
               !pet?.size ||
               activity.sizes.includes(pet.size as PetSizeCategory);
-            const dateOnly = selectedDateTime.split("T")[0];
+            const endFallback =
+              selectedEndDate || `${selectedStartDate.split("T")[0]}T23:59`;
             createAttendee(
               {
                 activityId: joinActivityId,
@@ -906,8 +904,10 @@ function UserAction({
                   (sizeMatch
                     ? undefined
                     : "The dogs size not match with the request"),
-                startDate: selectedDateTime ? new Date(selectedDateTime) : undefined,
-                endDate: selectedDateTime ? new Date(`${dateOnly}T23:59`) : undefined,
+                startDate: selectedStartDate
+                  ? new Date(selectedStartDate)
+                  : undefined,
+                endDate: selectedStartDate ? new Date(endFallback) : undefined,
               },
               { onSuccess: () => setJoinActivityId(null) },
             );
@@ -944,18 +944,18 @@ function HostActions({
   const { mutate: updateAttendee } = useUpdateAttendee();
   const [showEndConfirm, setShowEndConfirm] = useState(false);
 
-  // Build mock attendees-by-date: distribute joined attendees across nearby days
-  const joined = allAttendees.filter((a) => a.status === "joined");
+  // Fill every day in the attendee's booked range
   const attendeesByDate: Record<string, { image: string; name: string }[]> = {};
-  const offsets = [0, -1, 1, -2, 2, -3];
-  offsets.forEach((offset, idx) => {
-    const chunk = joined.slice(idx * 3, idx * 3 + 3);
-    if (chunk.length > 0) {
-      const dateKey = dayjs().add(offset, "day").format("YYYY-MM-DD");
-      attendeesByDate[dateKey] = chunk.map((a) => ({
-        image: a.image,
-        name: a.name,
-      }));
+  allAttendees.forEach((a) => {
+    if (!a.startDate) return;
+    const start = dayjs(a.startDate).startOf("day");
+    const end = a.endDate ? dayjs(a.endDate).startOf("day") : start;
+    let current = start;
+    while (!current.isAfter(end)) {
+      const dateKey = current.format("YYYY-MM-DD");
+      if (!attendeesByDate[dateKey]) attendeesByDate[dateKey] = [];
+      attendeesByDate[dateKey].push({ image: a.image, name: a.name });
+      current = current.add(1, "day");
     }
   });
 
@@ -970,7 +970,7 @@ function HostActions({
         label="Attendance Calendar"
         attendeesByDate={attendeesByDate}
         onDayClick={(dateKey) =>
-          router.push(`/activity/attendees/${activityId}&date=${dateKey}`)
+          router.push(`/activity/attendees/${activityId}?date=${dateKey}`)
         }
       />
       {!isBusiness && (

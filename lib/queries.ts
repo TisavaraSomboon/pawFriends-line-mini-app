@@ -410,6 +410,7 @@ export function useUpdateAttendee() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: keys.activities });
+      queryClient.invalidateQueries({ queryKey: ["userActivities"] });
     },
   });
 }
@@ -802,6 +803,8 @@ export type Attendee = {
   requestMessage?: string;
   ownerId?: string;
   attendeeId?: string;
+  startDate?: string;
+  endDate?: string;
 };
 
 export type AttendeeReq = {

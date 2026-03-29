@@ -1,6 +1,5 @@
 "use client";
 
-import { ACTIVITY_TYPE_BADGE } from "@/lib/constants";
 import { Activity, useUpdateAttendee } from "@/lib/queries";
 import { useToast } from "@/components/Toast";
 import dayjs from "dayjs";
