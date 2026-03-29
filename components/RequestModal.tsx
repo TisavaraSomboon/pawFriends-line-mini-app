@@ -95,6 +95,7 @@ export default function RequestModal({
     );
   const pct = compatibility?.score ?? getCompatibility(selectedPet);
   const color = isLove ? "#f43f5e" : getCompatibilityColor(pct);
+  const isNeedRequestMessage = pct < 80;
 
   if (!open || typeof document === "undefined") return null;
 
@@ -337,11 +338,33 @@ export default function RequestModal({
                   ))}
                 </div>
 
-                {/* Message when score < 90 */}
-                {!isCompatibilityLoading && pct < 90 && (
+                {!isCompatibilityLoading && isNeedRequestMessage && (
                   <div className="mt-4 flex flex-col gap-2">
-                    <p className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-wider">
-                      {isLove ? "Message to poster" : "Message to host"}
+                    <div
+                      className={clsx(
+                        "flex items-start gap-2 rounded-xl px-3 py-2.5 text-[12px] font-medium",
+                        isLove
+                          ? "bg-rose-50 text-rose-600 border border-rose-200"
+                          : "bg-amber-50 text-amber-700 border border-amber-200",
+                      )}
+                    >
+                      <span
+                        className="material-symbols-outlined shrink-0"
+                        style={{ fontSize: 15, marginTop: 1 }}
+                      >
+                        info
+                      </span>
+                      <span>
+                        {isLove
+                          ? "Low match score — send a message to introduce your dog and explain why they'd be a great match."
+                          : "Low compatibility score — a message to the host is required before you can send your request."}
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-wider mt-1">
+                      {isLove ? "Message to poster" : "Message to host"}{" "}
+                      <span className="text-red-400 normal-case font-normal">
+                        * required
+                      </span>
                     </p>
                     <textarea
                       rows={3}
@@ -375,6 +398,11 @@ export default function RequestModal({
               : "bg-[#f7f7f6]/80 border-[#e1cfb7]/20",
           )}
         >
+          {compatibility && isNeedRequestMessage && !message && (
+            <p className="text-center text-[11px] text-amber-600 font-medium mb-3">
+              Write a message above to enable your request
+            </p>
+          )}
           <button
             onClick={() =>
               selectedId && onConfirm(selectedId, message || undefined)
@@ -382,7 +410,7 @@ export default function RequestModal({
             disabled={
               isCompatibilityLoading ||
               !compatibility ||
-              (pct < 90 && !message) ||
+              (isNeedRequestMessage && !message) ||
               eligiblePets.length === 0
             }
             className={clsx(
