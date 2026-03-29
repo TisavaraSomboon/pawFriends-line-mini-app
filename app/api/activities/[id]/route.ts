@@ -68,17 +68,30 @@ export async function GET(
               },
             },
             {
+              $group: {
+                _id: "$attendeeId",
+                name: { $first: "$profile.name" },
+                image: { $first: "$profile.image" },
+                role: { $first: "$role" },
+                status: { $first: "$status" },
+                requestMessage: { $first: "$requestMessage" },
+                ownerId: { $first: "$profile.ownerId" },
+                dateRanges: {
+                  $push: { startDate: "$startDate", endDate: "$endDate" },
+                },
+              },
+            },
+            {
               $project: {
                 _id: 0,
-                name: "$profile.name",
-                image: "$profile.image",
-                role: "$role",
-                status: "$status",
-                requestMessage: "$requestMessage",
-                ownerId: "$profile.ownerId",
-                attendeeId: "$attendeeId",
-                startDate: "$startDate",
-                endDate: "$endDate",
+                attendeeId: "$_id",
+                name: 1,
+                image: 1,
+                role: 1,
+                status: 1,
+                requestMessage: 1,
+                ownerId: 1,
+                dateRanges: 1,
               },
             },
           ],
@@ -100,6 +113,27 @@ export async function GET(
         $unwind: {
           path: "$owner",
           preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "activitySlots",
+          let: { actId: "$_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$activityId", "$$actId"] } } },
+            {
+              $project: {
+                _id: 1,
+                label: 1,
+                startTime: 1,
+                endTime: 1,
+                maxDogs: 1,
+                attendeesId: 1,
+                weekday: 1,
+              },
+            },
+          ],
+          as: "slots",
         },
       },
       { $unset: "ownerId" },

@@ -6,6 +6,16 @@ import { clsx } from "clsx";
 
 type AttendeeAvatar = { image: string; name: string };
 
+type Slot = {
+  _id: string;
+  weekday: number;   // 0=Mon … 6=Sun
+  startTime: string; // "HH:mm"
+  endTime: string;   // "HH:mm"
+  maxDogs?: number;
+  attendeesId?: string[];
+  label?: string;
+};
+
 type Props = {
   startDate: string; // "YYYY-MM-DDTHH:mm"
   endDate: string;   // "YYYY-MM-DDTHH:mm"
@@ -17,6 +27,8 @@ type Props = {
   attendeesByDate?: Record<string, AttendeeAvatar[]>;
   onDayClick?: (dateKey: string) => void;
   readOnly?: boolean;
+  slots?: Slot[];
+  onSlotChange?: (slotId: string | null) => void;
 };
 
 export default function DateRangeCalendar({
@@ -29,9 +41,13 @@ export default function DateRangeCalendar({
   attendeesByDate,
   onDayClick,
   readOnly = false,
+  slots,
+  onSlotChange,
 }: Props) {
   const [month, setMonth] = useState(dayjs().startOf("month"));
   const [selectingEnd, setSelectingEnd] = useState(false);
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+  const changeSlot = (id: string | null) => { setSelectedSlotId(id); onSlotChange?.(id); };
   const today = dayjs().startOf("day");
 
   const startDay = startDate ? startDate.split("T")[0] : "";
@@ -48,6 +64,7 @@ export default function DateRangeCalendar({
   ];
 
   const handleDayClick = (dateKey: string) => {
+    changeSlot(null);
     if (isSingleDate) {
       onStartChange(`${dateKey}T${startTime}`);
       onEndChange(`${dateKey}T${endTime}`);
@@ -122,10 +139,15 @@ export default function DateRangeCalendar({
 
         {/* Day cells */}
         <div className="grid grid-cols-7 gap-0.5 px-2 pb-3">
-          {cells.map((day, i) => {
+          {(() => {
+            const availableWeekdays = slots && slots.length > 0
+              ? new Set(slots.map((s) => s.weekday))
+              : null;
+            return cells.map((day, i) => {
             if (!day) return <div key={`e-${i}`} />;
             const dateKey = day.format("YYYY-MM-DD");
             const isPast = day.isBefore(today);
+            const isClosed = !readOnly && !!availableWeekdays && !availableWeekdays.has((day.day() + 6) % 7);
             const isStart = dateKey === startDay;
             const isEnd = dateKey === endDay;
             const isInRange =
@@ -142,7 +164,7 @@ export default function DateRangeCalendar({
               <button
                 key={dateKey}
                 type="button"
-                disabled={readOnly ? isReadOnlyDisabled : isPast}
+                disabled={readOnly ? isReadOnlyDisabled : isPast || isClosed}
                 onClick={() => {
                   if (readOnly) {
                     if (hasAttendees) onDayClick?.(dateKey);
@@ -153,10 +175,10 @@ export default function DateRangeCalendar({
                 className={clsx(
                   "flex flex-col items-center justify-center rounded-xl gap-0.5 transition-all",
                   readOnly ? "h-14" : "h-10",
-                  !readOnly && isPast && "opacity-30 cursor-not-allowed",
-                  !readOnly && isSelected && "bg-[#1e293b]",
-                  !readOnly && isInRange && !isSelected && "bg-[rgba(226,207,183,0.35)]",
-                  !readOnly && !isSelected && !isInRange && !isPast && "hover:bg-[rgba(226,207,183,0.15)]",
+                  !readOnly && (isPast || isClosed) && "opacity-30 cursor-not-allowed",
+                  !readOnly && isSelected && !isClosed && "bg-[#1e293b]",
+                  !readOnly && isInRange && !isSelected && !isClosed && "bg-[rgba(226,207,183,0.35)]",
+                  !readOnly && !isSelected && !isInRange && !isPast && !isClosed && "hover:bg-[rgba(226,207,183,0.15)]",
                   readOnly && isPast && !hasAttendees && "opacity-30 cursor-not-allowed",
                   readOnly && hasAttendees && "hover:bg-[rgba(226,207,183,0.15)] cursor-pointer",
                   readOnly && !hasAttendees && !isPast && "cursor-default",
@@ -166,7 +188,7 @@ export default function DateRangeCalendar({
                 <p
                   className={clsx(
                     "text-[13px] font-bold leading-none",
-                    !readOnly && isSelected ? "text-white" : "text-[#1e293b]",
+                    !readOnly && isSelected && !isClosed ? "text-white" : "text-[#1e293b]",
                     readOnly && isToday && !hasAttendees && "text-[#e2cfb7]",
                   )}
                 >
@@ -216,62 +238,125 @@ export default function DateRangeCalendar({
                 )}
               </button>
             );
-          })}
+          });
+          })()}
         </div>
 
         {/* Time inputs — hidden in readOnly mode */}
-        {!readOnly && (
-          <div className="border-t border-[rgba(226,207,183,0.3)] px-4 py-3 flex flex-col gap-3">
-            <div className={clsx("grid gap-3", isSingleDate ? "grid-cols-1" : "grid-cols-2")}>
-              <div>
-                <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide mb-1.5">
-                  {isSingleDate ? "Time" : "Start Time"}
-                </p>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => {
-                    const day = startDay || dayjs().format("YYYY-MM-DD");
-                    onStartChange(`${day}T${e.target.value}`);
-                    if (isSingleDate) onEndChange(`${day}T${e.target.value}`);
-                  }}
-                  className="w-full h-10 rounded-lg border border-[rgba(226,207,183,0.4)] bg-white px-3 text-[13px] text-[#1e293b] outline-none focus:border-[#e1cfb7]"
-                />
-              </div>
-              {!isSingleDate && (
+        {!readOnly && (() => {
+          const slotsForDay = slots && startDay
+            ? slots.filter((s) => s.weekday === (dayjs(startDay).day() + 6) % 7)
+            : [];
+          const selectedSlot = slotsForDay.find((s) => s._id === selectedSlotId) ?? null;
+          return (
+            <div className="border-t border-[rgba(226,207,183,0.3)] px-4 py-3 flex flex-col gap-3">
+              {/* Slot picker */}
+              {slotsForDay.length > 0 && (
                 <div>
                   <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide mb-1.5">
-                    End Time
+                    Available Slots
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {slotsForDay.map((slot) => {
+                      const isFull = !!slot.maxDogs && (slot.attendeesId?.length ?? 0) >= slot.maxDogs;
+                      return (
+                        <button
+                          key={slot._id}
+                          type="button"
+                          disabled={isFull}
+                          onClick={() => {
+                            changeSlot(slot._id);
+                            const day = startDay;
+                            onStartChange(`${day}T${slot.startTime}`);
+                            onEndChange(`${isSingleDate ? day : (endDay || day)}T${slot.endTime}`);
+                          }}
+                          className={clsx(
+                            "px-3 py-2 rounded-lg text-[12px] font-semibold border transition-all text-left",
+                            isFull
+                              ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                              : selectedSlotId === slot._id
+                                ? "bg-[#1e293b] text-white border-[#1e293b]"
+                                : "bg-white text-[#1e293b] border-[rgba(226,207,183,0.6)] hover:border-[#1e293b]",
+                          )}
+                        >
+                          {slot.label && (
+                            <span className="block text-[11px] font-bold mb-0.5 opacity-70">{slot.label}</span>
+                          )}
+                          <span className={clsx(isFull && "line-through")}>
+                            {slot.startTime} – {slot.endTime}
+                          </span>
+                          {isFull && <span className="ml-1 text-[10px]">Full</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <div className={clsx("grid gap-3", isSingleDate ? "grid-cols-1" : "grid-cols-2")}>
+                <div>
+                  <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide mb-1.5">
+                    {isSingleDate ? "Time" : "Start Time"}
                   </p>
                   <input
                     type="time"
-                    value={endTime}
-                    onChange={(e) =>
-                      onEndChange(`${endDay || startDay || dayjs().format("YYYY-MM-DD")}T${e.target.value}`)
-                    }
+                    value={startTime}
+                    min={selectedSlot?.startTime}
+                    max={selectedSlot?.endTime}
+                    onChange={(e) => {
+                      let val = e.target.value;
+                      if (selectedSlot) {
+                        if (val < selectedSlot.startTime) val = selectedSlot.startTime;
+                        if (val > selectedSlot.endTime) val = selectedSlot.endTime;
+                      }
+                      const day = startDay || dayjs().format("YYYY-MM-DD");
+                      onStartChange(`${day}T${val}`);
+                      if (isSingleDate) onEndChange(`${day}T${val}`);
+                    }}
                     className="w-full h-10 rounded-lg border border-[rgba(226,207,183,0.4)] bg-white px-3 text-[13px] text-[#1e293b] outline-none focus:border-[#e1cfb7]"
                   />
                 </div>
-              )}
-            </div>
-            {startDay && (isSingleDate || endDay) && (
-              <div className="flex items-center justify-between text-[12px] font-semibold text-[#64748b] bg-[#f8fafc] rounded-lg px-3 py-2">
-                <span>{dayjs(startDay).format("D MMM")} · {startTime}</span>
                 {!isSingleDate && (
-                  <>
-                    <span
-                      className="material-symbols-outlined text-[#94a3b8]"
-                      style={{ fontSize: 14 }}
-                    >
-                      arrow_forward
-                    </span>
-                    <span>{dayjs(endDay).format("D MMM")} · {endTime}</span>
-                  </>
+                  <div>
+                    <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wide mb-1.5">
+                      End Time
+                    </p>
+                    <input
+                      type="time"
+                      value={endTime}
+                      min={selectedSlot?.startTime}
+                      max={selectedSlot?.endTime}
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        if (selectedSlot) {
+                          if (val < selectedSlot.startTime) val = selectedSlot.startTime;
+                          if (val > selectedSlot.endTime) val = selectedSlot.endTime;
+                        }
+                        onEndChange(`${endDay || startDay || dayjs().format("YYYY-MM-DD")}T${val}`);
+                      }}
+                      className="w-full h-10 rounded-lg border border-[rgba(226,207,183,0.4)] bg-white px-3 text-[13px] text-[#1e293b] outline-none focus:border-[#e1cfb7]"
+                    />
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        )}
+              {startDay && (isSingleDate || endDay) && (
+                <div className="flex items-center justify-between text-[12px] font-semibold text-[#64748b] bg-[#f8fafc] rounded-lg px-3 py-2">
+                  <span>{dayjs(startDay).format("D MMM")} · {startTime}</span>
+                  {!isSingleDate && (
+                    <>
+                      <span
+                        className="material-symbols-outlined text-[#94a3b8]"
+                        style={{ fontSize: 14 }}
+                      >
+                        arrow_forward
+                      </span>
+                      <span>{dayjs(endDay).format("D MMM")} · {endTime}</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

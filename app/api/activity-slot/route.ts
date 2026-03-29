@@ -51,6 +51,24 @@ export async function POST(req: Request) {
   return NextResponse.json({ id: result.insertedId }, { status: 201 });
 }
 
+// PATCH /api/activity-slot — push attendeeId into attendeesID
+export async function PATCH(req: Request) {
+  const auth = await getAuthUser();
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { slotId, attendeeId } = await req.json();
+  if (!slotId || !attendeeId)
+    return NextResponse.json({ error: "slotId and attendeeId are required" }, { status: 400 });
+
+  const col = await activitySlotsCol();
+  await col.updateOne(
+    { _id: new ObjectId(slotId) },
+    { $addToSet: { attendeesID: new ObjectId(attendeeId) } },
+  );
+
+  return NextResponse.json({ ok: true });
+}
+
 // DELETE /api/activity-slot?id=xxx
 export async function DELETE(req: Request) {
   const auth = await getAuthUser();

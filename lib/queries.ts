@@ -385,16 +385,29 @@ export function useAttendees(activityId: string) {
 export function useCreateAttendees() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: Partial<AttendeeReq>) =>
-      apiFetch(`/api/attendees`, {
+    mutationFn: async ({
+      activitySlotID,
+      ...body
+    }: Partial<AttendeeReq & { activitySlotID?: string }>) => {
+      const res = await apiFetch<{ id: string }>(`/api/attendees`, {
         method: "POST",
         body: JSON.stringify(body),
-      }),
+      });
+      if (activitySlotID && res.id) {
+        await apiFetch(`/api/activity-slot`, {
+          method: "PATCH",
+          body: JSON.stringify({ slotId: activitySlotID, attendeeId: res.id }),
+        });
+      }
+      return res;
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["attendees"] });
       queryClient.invalidateQueries({ queryKey: keys.activities });
       if (variables.activityId) {
-        queryClient.invalidateQueries({ queryKey: keys.activity(variables.activityId) });
+        queryClient.invalidateQueries({
+          queryKey: keys.activity(variables.activityId),
+        });
       }
     },
   });
@@ -700,6 +713,15 @@ export type Activity = {
   autoEnd?: boolean;
   petRequirements?: string[];
   tags?: string[];
+  slots?: {
+    _id: string;
+    weekday: number;
+    startTime: string;
+    endTime: string;
+    maxDogs?: number;
+    attendeesId?: string[];
+    label?: string;
+  }[];
 };
 
 export type Pet = {
@@ -804,8 +826,7 @@ export type Attendee = {
   requestMessage?: string;
   ownerId?: string;
   attendeeId?: string;
-  startDate?: string;
-  endDate?: string;
+  dateRanges?: { startDate?: string; endDate?: string }[];
 };
 
 export type AttendeeReq = {

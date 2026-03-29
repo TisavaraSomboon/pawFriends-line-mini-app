@@ -846,29 +846,53 @@ function UserAction({
   const { mutate: createAttendee } = useCreateAttendees();
   const [selectedStartDate, setSelectedStartDate] = useState("");
   const [selectedEndDate, setSelectedEndDate] = useState("");
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
 
   const attendeesByDate: Record<string, { image: string; name: string }[]> = {};
   (activity?.attendees ?? []).forEach((a) => {
-    if (!a.startDate) return;
-    const start = dayjs(a.startDate).startOf("day");
-    const end = a.endDate ? dayjs(a.endDate).startOf("day") : start;
-    let current = start;
-    while (!current.isAfter(end)) {
-      const dateKey = current.format("YYYY-MM-DD");
-      if (!attendeesByDate[dateKey]) attendeesByDate[dateKey] = [];
-      attendeesByDate[dateKey].push({ image: a.image, name: a.name });
-      current = current.add(1, "day");
-    }
+    (a.dateRanges ?? []).forEach((range) => {
+      if (!range.startDate) return;
+      const start = dayjs(range.startDate).startOf("day");
+      const end = range.endDate ? dayjs(range.endDate).startOf("day") : start;
+      let current = start;
+      while (!current.isAfter(end)) {
+        const dateKey = current.format("YYYY-MM-DD");
+        if (!attendeesByDate[dateKey]) attendeesByDate[dateKey] = [];
+        attendeesByDate[dateKey].push({ image: a.image, name: a.name });
+        current = current.add(1, "day");
+      }
+    });
   });
 
   const isPersonal = activity?.hostType === "personal";
+  const isBusiness = activity?.hostType === "business";
   const joinedCount =
     activity?.attendees?.filter((a) => a.status === "joined").length ?? 0;
   const isFull = !!activity?.maxDogs && joinedCount >= activity.maxDogs;
   const hasSelectedDate = isPersonal || !!selectedStartDate;
 
+  // For business: check if any of the user's pets already have a booking overlapping the selected slot
+  const isSlotAlreadyBooked = isBusiness && !!selectedStartDate && pets.some((pet) =>
+    activity?.attendees?.some((a) => {
+      if (a.attendeeId !== pet._id) return false;
+      const selStart = dayjs(selectedStartDate).startOf("day");
+      const selEnd = selectedEndDate ? dayjs(selectedEndDate).startOf("day") : selStart;
+      return (a.dateRanges ?? []).some((range) => {
+        if (!range.startDate) return false;
+        const aStart = dayjs(range.startDate).startOf("day");
+        const aEnd = range.endDate ? dayjs(range.endDate).startOf("day") : aStart;
+        // overlap: neither range ends before the other starts
+        return !aEnd.isBefore(selStart) && !aStart.isAfter(selEnd);
+      });
+    }),
+  );
+
+  // Business allows multiple bookings; personal/other types block on isJoined
+  const effectiveIsJoined = isBusiness ? false : isJoined;
+  const effectiveIsPending = isBusiness ? false : isPending;
+
   const buttonDisabled =
-    isDisable || !hasSelectedDate || isFull || isPending || isJoined;
+    isDisable || !hasSelectedDate || isFull || effectiveIsPending || effectiveIsJoined || isSlotAlreadyBooked;
 
   const tooltipLabel = isDisable
     ? "You need to add at least 1 pet to join this activity."
@@ -876,31 +900,37 @@ function UserAction({
       ? "Please select a date and time first."
       : isFull
         ? "This slot is fully booked."
-        : isPending
-          ? "Your request is waiting for approval."
-          : "";
+        : isSlotAlreadyBooked
+          ? "You already have a booking for this date."
+          : effectiveIsPending
+            ? "Your request is waiting for approval."
+            : "";
 
   const buttonIcon = isFull
     ? "block"
-    : isPending
-      ? "hourglass_empty"
-      : isJoined
-        ? "check_circle"
-        : isLove
-          ? "favorite"
-          : "pets";
+    : isSlotAlreadyBooked
+      ? "event_busy"
+      : effectiveIsPending
+        ? "hourglass_empty"
+        : effectiveIsJoined
+          ? "check_circle"
+          : isLove
+            ? "favorite"
+            : "pets";
 
   const buttonLabel = isFull
     ? "Not Available"
-    : isPending
-      ? "Waiting for Approve"
-      : isJoined
-        ? isLove
-          ? "Requested! 💕"
-          : "Joined!"
-        : isLove
-          ? "Request a Date 💕"
-          : "Request to Join";
+    : isSlotAlreadyBooked
+      ? "Already Booked"
+      : effectiveIsPending
+        ? "Waiting for Approve"
+        : effectiveIsJoined
+          ? isLove
+            ? "Requested! 💕"
+            : "Joined!"
+          : isLove
+            ? "Request a Date 💕"
+            : "Request to Join";
 
   return (
     <>
@@ -913,6 +943,8 @@ function UserAction({
           onEndChange={setSelectedEndDate}
           label="Pick a Date & Time"
           attendeesByDate={attendeesByDate}
+          slots={activity?.slots}
+          onSlotChange={setSelectedSlotId}
         />
       )}
       <Tooltip
@@ -926,15 +958,17 @@ function UserAction({
             "w-full h-14 rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98]",
             {
               "bg-white border-2 border-rose-300 text-rose-500 hover:bg-rose-50":
-                isJoined && isLove,
+                effectiveIsJoined && isLove,
               "bg-white border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]":
-                isJoined && !isLove,
+                effectiveIsJoined && !isLove,
               "bg-amber-100 text-amber-700 border-2 border-amber-200":
-                isPending && !isJoined,
+                effectiveIsPending && !effectiveIsJoined,
+              "bg-slate-100 text-slate-400 border-2 border-slate-200 cursor-not-allowed":
+                isSlotAlreadyBooked,
               "bg-rose-500 text-white hover:bg-rose-600":
-                !isJoined && !isPending && isLove && !isFull,
+                !effectiveIsJoined && !effectiveIsPending && !isSlotAlreadyBooked && isLove && !isFull,
               "bg-[#e2cfb7] text-[#1e293b] hover:opacity-90":
-                !isJoined && !isPending && !isLove && !isFull,
+                !effectiveIsJoined && !effectiveIsPending && !isSlotAlreadyBooked && !isLove && !isFull,
               "bg-slate-200 text-slate-400 cursor-not-allowed": isFull,
               "opacity-50 pointer-events-none": buttonDisabled,
             },
@@ -966,6 +1000,7 @@ function UserAction({
                   ? new Date(selectedStartDate)
                   : undefined,
                 endDate: selectedStartDate ? new Date(endFallback) : undefined,
+                ...(selectedSlotId ? { activitySlotID: selectedSlotId } : {}),
               },
               { onSuccess: () => setJoinActivityId(null) },
             );
@@ -1005,16 +1040,18 @@ function HostActions({
   // Fill every day in the attendee's booked range
   const attendeesByDate: Record<string, { image: string; name: string }[]> = {};
   allAttendees.forEach((a) => {
-    if (!a.startDate) return;
-    const start = dayjs(a.startDate).startOf("day");
-    const end = a.endDate ? dayjs(a.endDate).startOf("day") : start;
-    let current = start;
-    while (!current.isAfter(end)) {
-      const dateKey = current.format("YYYY-MM-DD");
-      if (!attendeesByDate[dateKey]) attendeesByDate[dateKey] = [];
-      attendeesByDate[dateKey].push({ image: a.image, name: a.name });
-      current = current.add(1, "day");
-    }
+    (a.dateRanges ?? []).forEach((range) => {
+      if (!range.startDate) return;
+      const start = dayjs(range.startDate).startOf("day");
+      const end = range.endDate ? dayjs(range.endDate).startOf("day") : start;
+      let current = start;
+      while (!current.isAfter(end)) {
+        const dateKey = current.format("YYYY-MM-DD");
+        if (!attendeesByDate[dateKey]) attendeesByDate[dateKey] = [];
+        attendeesByDate[dateKey].push({ image: a.image, name: a.name });
+        current = current.add(1, "day");
+      }
+    });
   });
 
   return (
