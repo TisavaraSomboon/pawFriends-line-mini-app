@@ -390,9 +390,12 @@ export function useCreateAttendees() {
         method: "POST",
         body: JSON.stringify(body),
       }),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["attendees"] });
       queryClient.invalidateQueries({ queryKey: keys.activities });
+      if (variables.activityId) {
+        queryClient.invalidateQueries({ queryKey: keys.activity(variables.activityId) });
+      }
     },
   });
 }
