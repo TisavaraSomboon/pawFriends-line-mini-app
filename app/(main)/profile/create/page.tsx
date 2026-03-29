@@ -512,7 +512,7 @@ export default function CreatePetPage() {
 
       {/* ── Sticky submit bar (step 2 only) ── */}
       {step === 2 && (
-        <div className="fixed bottom-0 left-0 right-0 md:left-64 bg-[#f7f7f6]/90 backdrop-blur-md border-t border-[rgba(226,207,183,0.2)] px-4 py-4">
+        <div className="fixed bottom-8 left-0 right-0 md:left-64 bg-[#f7f7f6]/90 backdrop-blur-md border-t border-[rgba(226,207,183,0.2)] px-4 py-4">
           <div className="max-w-lg mx-auto flex flex-col gap-2">
             <button
               type="button"
