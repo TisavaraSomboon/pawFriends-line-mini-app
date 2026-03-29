@@ -71,7 +71,7 @@ export default function RequestModal({
   onConfirm,
 }: Props) {
   const isLove = activityType === "love";
-  const eligiblePets = isLove ? pets.filter((p) => !p.sterilizing) : pets;
+  const eligiblePets = isLove ? pets.filter((p) => p.sterilizing) : pets;
 
   const [selectedId, setSelectedId] = useState<string>(
     eligiblePets[0]?._id ?? "",
@@ -247,7 +247,7 @@ export default function RequestModal({
             })}
           </div>
 
-          {eligiblePets.length !== 0 && isCompatibilityLoading && (
+          {selectedId && isCompatibilityLoading && (
             <SpinLoader title="Loading Compatibility" />
           )}
           {/* ── Compatibility panel ── */}
