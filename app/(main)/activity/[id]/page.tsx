@@ -20,6 +20,7 @@ import RequestModal from "@/components/RequestModal";
 import { useToast } from "@/components/Toast";
 import clsx from "clsx";
 import Tooltip from "@/components/Tooltip";
+import ConfirmModal from "@/components/ConfirmModal";
 
 const FALLBACK_AVATAR =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuBuzALWachO_YIj8n2rR-FLfaEYVj3LhYbo9hEjMEUR56kinTG63BRNgCKCr2UY94D71unYWxE4HXlvQwfOO6iH5U14SS6xGwZ_t0JPr2LaSWERa91zC5xmVFEP1EPhKdJ8RdW5EyNIgXqHO7I6fzubsaAgzj3wVnSlk40Xx5Gytefc7WB8s58QJOPu9U94Y_MWJX_HM2WRhjYJkQs6lMuDySUnFmGBw_Wn7XDJFOAxscL2Izuf3UznPYuNQVRv0x5nqBzhRT1i-uJ3";
@@ -921,6 +922,7 @@ function HostActions({
 }) {
   const { toast } = useToast();
   const { mutate: updateAttendee } = useUpdateAttendee();
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   return (
     <div className="flex flex-col gap-3">
@@ -1030,13 +1032,35 @@ function HostActions({
           "w-full h-14 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm active:scale-[0.98]",
           isLove ? "bg-rose-500" : "bg-[#1e293b]",
         )}
-        onClick={onEnded}
+        onClick={() => setShowEndConfirm(true)}
       >
         <span className="material-symbols-outlined">
           {isLove ? "heart_broken" : "pets"}
         </span>
         {isLove ? "End Match" : "End Activity"}
       </button>
+
+      <ConfirmModal
+        open={showEndConfirm}
+        title={isLove ? "End Match?" : "End Activity?"}
+        description={
+          isLove
+            ? "Are you sure you want to end this match? This action cannot be undone."
+            : "Are you sure you want to end this activity? This action cannot be undone."
+        }
+        confirmLabel={isLove ? "End Match" : "End Activity"}
+        confirmClassName={isLove ? "bg-rose-500 text-white hover:bg-rose-600" : "bg-[#1e293b] text-white hover:bg-[#0f172a]"}
+        icon={
+          <span className="material-symbols-outlined text-2xl text-[#64748b]">
+            {isLove ? "heart_broken" : "pets"}
+          </span>
+        }
+        onConfirm={() => {
+          setShowEndConfirm(false);
+          onEnded();
+        }}
+        onCancel={() => setShowEndConfirm(false)}
+      />
     </div>
   );
 }
