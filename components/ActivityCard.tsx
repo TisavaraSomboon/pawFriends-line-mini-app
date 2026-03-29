@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Tooltip from "./Tooltip";
 import { userProfile } from "@/lib/constants";
+import AttendeeGrid from "./AttendeeGrid";
 
 interface Attendees {
   image: string;
@@ -188,34 +189,13 @@ export default function ActivityCard({
 
               {/* Attendee avatars */}
               {attendees.length > 0 && (
-                <div className="flex -space-x-1.5 mb-2">
-                  {attendees.map((av, i) => (
-                    <div
-                      key={i}
-                      className={clsx(
-                        "w-5 h-5 rounded-full border-2 bg-[#e2e8f0] overflow-hidden",
-                        isLove ? "border-rose-100" : "border-white",
-                      )}
-                    >
-                      <Image
-                        src={av.image}
-                        alt={av.name}
-                        className="w-full h-full object-cover rounded-full"
-                        width={40}
-                        height={40}
-                      />
-                    </div>
-                  ))}
-                  <div
-                    className={clsx(
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center text-[9px] font-bold text-[#1e293b]",
-                      isLove
-                        ? "border-rose-100 bg-rose-50"
-                        : "border-white bg-[rgba(226,207,183,0.3)]",
-                    )}
-                  >
-                    +{extraCount}
-                  </div>
+                <div className="mb-2">
+                  <AttendeeGrid
+                    attendees={attendees}
+                    isLove={isLove}
+                    size="xs"
+                    extraCount={attendees.length > 3 ? extraCount : undefined}
+                  />
                 </div>
               )}
 

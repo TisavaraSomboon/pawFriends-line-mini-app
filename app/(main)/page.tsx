@@ -9,19 +9,17 @@ import {
   useProfile,
   useSendFeedback,
 } from "@/lib/queries";
-import {
-  ACTIVITY_TYPE_BADGE,
-  formatActivityTime,
-  formatStartTim,
-} from "@/lib/constants";
+import { ACTIVITY_TYPE_BADGE, formatStartTim } from "@/lib/constants";
 import Image from "next/image";
 import SpinLoader from "@/components/SpinLoader";
 import RequestModal from "@/components/RequestModal";
+import { useRouter } from "next/navigation";
 
 const FILTERS = ["All Activities", "Nearby", "Today", "Playdates"] as const;
 type Filter = (typeof FILTERS)[number];
 
 export default function HomePage() {
+  const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<Filter>("All Activities");
   const [search, setSearch] = useState("");
   const [joinActivityId, setJoinActivityId] = useState<string | null>(null);
@@ -257,6 +255,10 @@ export default function HomePage() {
                         )
                       }
                       onJoin={() => {
+                        if (activity.hostType === "business") {
+                          router.push(`/activity/${activity._id}`);
+                          return;
+                        }
                         if (allProfiles && allProfiles.pets.length > 0)
                           setJoinActivityId(activity._id);
                       }}

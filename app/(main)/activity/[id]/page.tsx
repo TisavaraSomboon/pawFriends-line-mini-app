@@ -10,6 +10,7 @@ import {
   Pet,
   PetSizeCategory,
   useActivity,
+  useAttendees,
   useCreateAttendees,
   useEndActivity,
   useProfile,
@@ -22,6 +23,7 @@ import clsx from "clsx";
 import Tooltip from "@/components/Tooltip";
 import ConfirmModal from "@/components/ConfirmModal";
 import DateRangeCalendar from "@/components/DateRangeCalendar";
+import AttendeeGrid from "@/components/AttendeeGrid";
 
 const FALLBACK_AVATAR =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuBuzALWachO_YIj8n2rR-FLfaEYVj3LhYbo9hEjMEUR56kinTG63BRNgCKCr2UY94D71unYWxE4HXlvQwfOO6iH5U14SS6xGwZ_t0JPr2LaSWERa91zC5xmVFEP1EPhKdJ8RdW5EyNIgXqHO7I6fzubsaAgzj3wVnSlk40Xx5Gytefc7WB8s58QJOPu9U94Y_MWJX_HM2WRhjYJkQs6lMuDySUnFmGBw_Wn7XDJFOAxscL2Izuf3UznPYuNQVRv0x5nqBzhRT1i-uJ3";
@@ -120,7 +122,17 @@ export default function ActivityDetailPage() {
     !!allProfiles &&
     allProfiles.pets.length > 0 &&
     allProfiles.pets.every((pet) =>
-      activity?.attendees?.some((a) => a.name === pet.name),
+      activity?.attendees?.some(
+        (a) => a.name === pet.name && a.status === "joined",
+      ),
+    );
+
+  const isAnyPetPending =
+    !!allProfiles &&
+    allProfiles.pets.some((pet) =>
+      activity?.attendees?.some(
+        (a) => a.name === pet.name && a.status === "pending",
+      ),
     );
 
   if (isFetching) return <SpinLoader title="Loading activity" />;
@@ -134,6 +146,7 @@ export default function ActivityDetailPage() {
       setShowRequests={setShowRequests}
       onEnded={() => endedActivity()}
       isLove={isLove}
+      isBusiness={activity?.hostType === "business"}
     />
   ) : (
     <UserAction
@@ -142,6 +155,7 @@ export default function ActivityDetailPage() {
       activity={activity}
       pets={allProfiles?.pets ?? []}
       isJoined={isAllPetJoined}
+      isPending={isAnyPetPending}
       isLove={isLove}
       isDisable={!activity || !allProfiles || allProfiles.pets.length <= 0}
       onAttendeeJoin={() => {
@@ -298,7 +312,7 @@ export default function ActivityDetailPage() {
         </div>
         <div
           className={clsx(
-            "fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-107.5 p-4 backdrop-blur-md border-t",
+            "w-full max-w-107.5 p-4 backdrop-blur-md border-t",
             isLove
               ? "bg-rose-50/80 border-rose-200/40"
               : "bg-[#f7f7f6]/80 border-[rgba(226,207,183,0.3)]",
@@ -544,25 +558,11 @@ export default function ActivityDetailPage() {
               )}
             >
               <div className="flex items-center gap-2">
-                <div className="flex -space-x-2">
-                  {activity?.attendees?.slice(0, 3).map(({ image, name }) => (
-                    <div
-                      key={name}
-                      className={clsx(
-                        "w-8 h-8 rounded-full border-2 overflow-hidden",
-                        isLove ? "border-rose-200" : "border-white",
-                      )}
-                    >
-                      <Image
-                        src={image}
-                        alt={name}
-                        className="w-full h-full object-cover"
-                        width={64}
-                        height={64}
-                      />
-                    </div>
-                  ))}
-                </div>
+                <AttendeeGrid
+                  attendees={activity?.attendees?.slice(0, 3) ?? []}
+                  isLove={isLove}
+                  size="sm"
+                />
                 <p className="text-[13px] text-[#475569]">
                   <span className="font-bold text-[#1e293b]">
                     {activity?.attendees?.length} pups
@@ -610,51 +610,6 @@ export default function ActivityDetailPage() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ── Shared attendee grid ── */
-function AttendeeGrid({
-  attendees,
-  isLove,
-}: {
-  attendees: Attendee[];
-  isLove?: boolean;
-}) {
-  const router = useRouter();
-  return (
-    <div className="flex flex-wrap gap-4">
-      {attendees.map(({ image, name, ownerId, attendeeId }) => (
-        <button
-          key={name}
-          onClick={() =>
-            ownerId &&
-            router.push(
-              `/profile/${ownerId}${attendeeId ? `?Id=${attendeeId}` : ""}`,
-            )
-          }
-          className="flex flex-col items-center gap-1 w-16"
-        >
-          <div
-            className={clsx(
-              "w-14 h-14 rounded-full overflow-hidden border-2",
-              isLove ? "border-rose-300" : "border-[#e2cfb7]",
-            )}
-          >
-            <Image
-              src={image}
-              alt={name}
-              className="w-full h-full object-cover"
-              width={56}
-              height={56}
-            />
-          </div>
-          <p className="text-xs font-medium text-[#475569] text-center truncate w-full">
-            {name}
-          </p>
-        </button>
-      ))}
     </div>
   );
 }
@@ -824,6 +779,7 @@ function UserAction({
   activity,
   pets,
   isJoined,
+  isPending,
   isLove,
   isDisable,
   setJoinActivityId,
@@ -833,26 +789,72 @@ function UserAction({
   activity?: Activity;
   pets: Pet[];
   isJoined: boolean;
+  isPending?: boolean;
   isLove?: boolean;
   isDisable?: boolean;
   setJoinActivityId: (open: string | null) => void;
   onAttendeeJoin: () => void;
 }) {
   const { mutate: createAttendee } = useCreateAttendees();
+  const [selectedDateTime, setSelectedDateTime] = useState("");
+
+  const { data: attendeesData } = useAttendees(activity?._id ?? "");
+  const joinedCount =
+    (attendeesData as unknown as Attendee[])?.filter(
+      (a) => a.status === "joined",
+    ).length ?? 0;
+  const isFull = !!activity?.maxDogs && joinedCount >= activity.maxDogs;
+  const hasSelectedDate = !!selectedDateTime;
+
+  const buttonDisabled =
+    isDisable || !hasSelectedDate || isFull || isPending || isJoined;
+
+  const tooltipLabel = isDisable
+    ? "You need to add at least 1 pet to join this activity."
+    : !hasSelectedDate
+      ? "Please select a date and time first."
+      : isFull
+        ? "This slot is fully booked."
+        : isPending
+          ? "Your request is waiting for approval."
+          : "";
+
+  const buttonIcon = isFull
+    ? "block"
+    : isPending
+      ? "hourglass_empty"
+      : isJoined
+        ? "check_circle"
+        : isLove
+          ? "favorite"
+          : "pets";
+
+  const buttonLabel = isFull
+    ? "Not Available"
+    : isPending
+      ? "Waiting for Approve"
+      : isJoined
+        ? isLove
+          ? "Requested! 💕"
+          : "Joined!"
+        : isLove
+          ? "Request a Date 💕"
+          : "Request to Join";
 
   return (
     <>
       <DateRangeCalendar
         isSingleDate={true}
-        startDate=""
-        endDate=""
-        onEndChange={() => {}}
-        onStartChange={() => {}}
+        startDate={selectedDateTime}
+        endDate={selectedDateTime}
+        onStartChange={setSelectedDateTime}
+        onEndChange={setSelectedDateTime}
+        label="Pick a Date & Time"
       />
       <Tooltip
         className="w-full mt-4"
-        label="You need to add at least 1 pet to join this activity."
-        isDisable={!isDisable}
+        label={tooltipLabel}
+        isDisable={!buttonDisabled}
       >
         <button
           onClick={onAttendeeJoin}
@@ -863,24 +865,20 @@ function UserAction({
                 isJoined && isLove,
               "bg-white border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]":
                 isJoined && !isLove,
-              "bg-rose-500 text-white hover:bg-rose-600": !isJoined && isLove,
+              "bg-amber-100 text-amber-700 border-2 border-amber-200":
+                isPending && !isJoined,
+              "bg-rose-500 text-white hover:bg-rose-600":
+                !isJoined && !isPending && isLove && !isFull,
               "bg-[#e2cfb7] text-[#1e293b] hover:opacity-90":
-                !isJoined && !isLove,
-              "opacity-50 pointer-events-none": isDisable,
+                !isJoined && !isPending && !isLove && !isFull,
+              "bg-slate-200 text-slate-400 cursor-not-allowed": isFull,
+              "opacity-50 pointer-events-none": buttonDisabled,
             },
           )}
-          disabled={isDisable}
+          disabled={buttonDisabled}
         >
-          <span className="material-symbols-outlined">
-            {isJoined ? "check_circle" : isLove ? "favorite" : "pets"}
-          </span>
-          {isJoined
-            ? isLove
-              ? "Requested! 💕"
-              : "Joined!"
-            : isLove
-              ? "Request a Date 💕"
-              : "Request to Join"}
+          <span className="material-symbols-outlined">{buttonIcon}</span>
+          {buttonLabel}
         </button>
       </Tooltip>
       {activity && (
@@ -896,6 +894,7 @@ function UserAction({
               !activity?.sizes?.length ||
               !pet?.size ||
               activity.sizes.includes(pet.size as PetSizeCategory);
+            const dateOnly = selectedDateTime.split("T")[0];
             createAttendee(
               {
                 activityId: joinActivityId,
@@ -907,6 +906,8 @@ function UserAction({
                   (sizeMatch
                     ? undefined
                     : "The dogs size not match with the request"),
+                startDate: selectedDateTime ? new Date(selectedDateTime) : undefined,
+                endDate: selectedDateTime ? new Date(`${dateOnly}T23:59`) : undefined,
               },
               { onSuccess: () => setJoinActivityId(null) },
             );
@@ -927,6 +928,7 @@ function HostActions({
   setShowRequests,
   onEnded,
   isLove,
+  isBusiness = false,
 }: {
   attendees: Attendee[];
   allAttendees: Attendee[];
@@ -935,6 +937,7 @@ function HostActions({
   setShowRequests: (v: boolean) => void;
   onEnded: () => void;
   isLove?: boolean;
+  isBusiness?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -967,23 +970,23 @@ function HostActions({
         label="Attendance Calendar"
         attendeesByDate={attendeesByDate}
         onDayClick={(dateKey) =>
-          router.push(
-            `/activity/attendeesDetails?activityId=${activityId}&date=${dateKey}`,
-          )
+          router.push(`/activity/attendees/${activityId}&date=${dateKey}`)
         }
       />
-      <button
-        onClick={() => router.push(`/activity/attendeesDetails?activityId=${activityId}`)}
-        className={clsx(
-          "w-full h-14 bg-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]",
-          isLove
-            ? "border-2 border-rose-300 text-rose-500 hover:bg-rose-50"
-            : "border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]",
-        )}
-      >
-        <span className="material-symbols-outlined">person_add</span>
-        Manage Requests ({attendees.length ?? 0})
-      </button>
+      {!isBusiness && (
+        <button
+          onClick={() => router.push(`/activity/attendees/${activityId}`)}
+          className={clsx(
+            "w-full h-14 bg-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]",
+            isLove
+              ? "border-2 border-rose-300 text-rose-500 hover:bg-rose-50"
+              : "border-2 border-[#e2cfb7] text-[#1e293b] hover:bg-[rgba(226,207,183,0.1)]",
+          )}
+        >
+          <span className="material-symbols-outlined">person_add</span>
+          Manage Requests ({attendees.length ?? 0})
+        </button>
+      )}
 
       {showRequests && (
         <div

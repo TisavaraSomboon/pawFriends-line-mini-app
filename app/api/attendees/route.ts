@@ -37,6 +37,8 @@ export async function POST(req: Request) {
     status: body.status,
     requestMessage: body.requestMessage,
     role: body.role,
+    startDate: body.startDate ? new Date(body.startDate) : null,
+    endDate: body.endDate ? new Date(body.endDate) : null,
     createdAt: new Date(),
     updatedAt: new Date(),
   });

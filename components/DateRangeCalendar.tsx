@@ -135,12 +135,14 @@ export default function DateRangeCalendar({
 
             const dateAttendees = attendeesByDate?.[dateKey] ?? [];
             const hasAttendees = dateAttendees.length > 0;
+            // In readOnly: past days with attendees are still clickable; past days without are not
+            const isReadOnlyDisabled = readOnly && isPast && !hasAttendees;
 
             return (
               <button
                 key={dateKey}
                 type="button"
-                disabled={readOnly ? false : isPast}
+                disabled={readOnly ? isReadOnlyDisabled : isPast}
                 onClick={() => {
                   if (readOnly) {
                     if (hasAttendees) onDayClick?.(dateKey);
@@ -155,8 +157,9 @@ export default function DateRangeCalendar({
                   !readOnly && isSelected && "bg-[#1e293b]",
                   !readOnly && isInRange && !isSelected && "bg-[rgba(226,207,183,0.35)]",
                   !readOnly && !isSelected && !isInRange && !isPast && "hover:bg-[rgba(226,207,183,0.15)]",
+                  readOnly && isPast && !hasAttendees && "opacity-30 cursor-not-allowed",
                   readOnly && hasAttendees && "hover:bg-[rgba(226,207,183,0.15)] cursor-pointer",
-                  readOnly && !hasAttendees && "cursor-default",
+                  readOnly && !hasAttendees && !isPast && "cursor-default",
                   readOnly && isToday && "ring-1 ring-[rgba(226,207,183,0.6)] rounded-xl",
                 )}
               >

@@ -263,7 +263,9 @@ export function useCreateActivity() {
     ) => {
       const { weekdaySlots, image: imageFiles, ...activityBody } = body;
 
-      const images = imageFiles?.length ? await uploadActivityImages(imageFiles) : [];
+      const images = imageFiles?.length
+        ? await uploadActivityImages(imageFiles)
+        : [];
 
       const result = await apiFetch<{ id: string }>("/api/activities", {
         method: "POST",
@@ -803,6 +805,8 @@ export type AttendeeReq = {
   _id: string;
   attendeeId: string;
   activityId: string;
+  startDate: Date;
+  endDate?: Date;
   status?: "pending" | "joined" | "rejected";
   requestMessage?: string;
   role: "pet" | "user";
