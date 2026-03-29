@@ -902,13 +902,8 @@ function UserAction({
           pets={pets ?? []}
           activityType={activity.type}
           activitySizes={activity.sizes}
-          onConfirm={(selectedId, message) => {
+          onConfirm={(selectedId, message, needsApproval) => {
             if (!joinActivityId) return;
-            const pet = pets.find((p) => p._id === selectedId);
-            const sizeMatch =
-              !activity?.sizes?.length ||
-              !pet?.size ||
-              activity.sizes.includes(pet.size as PetSizeCategory);
             const endFallback =
               selectedEndDate || `${selectedStartDate.split("T")[0]}T23:59`;
             createAttendee(
@@ -916,12 +911,8 @@ function UserAction({
                 activityId: joinActivityId,
                 attendeeId: selectedId,
                 role: "pet",
-                status: sizeMatch ? "joined" : "pending",
-                requestMessage:
-                  message ??
-                  (sizeMatch
-                    ? undefined
-                    : "The dogs size not match with the request"),
+                status: needsApproval ? "pending" : "joined",
+                requestMessage: message,
                 startDate: selectedStartDate
                   ? new Date(selectedStartDate)
                   : undefined,

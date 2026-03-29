@@ -15,7 +15,11 @@ type Props = {
   activityType?: string;
   activitySizes?: string[];
   onCancel: () => void;
-  onConfirm: (selectedId: string, message?: string) => void;
+  onConfirm: (
+    selectedId: string,
+    message?: string,
+    needsApproval?: boolean,
+  ) => void;
 };
 
 function getCompatibility(pet?: Pet): number {
@@ -95,6 +99,10 @@ export default function RequestModal({
     );
   const pct = compatibility?.score ?? getCompatibility(selectedPet);
   const color = isLove ? "#f43f5e" : getCompatibilityColor(pct);
+  const sizeMatch =
+    !activitySizes?.length ||
+    !selectedPet?.size ||
+    activitySizes.includes(selectedPet.size);
   const isNeedRequestMessage = pct < 80;
 
   if (!open || typeof document === "undefined") return null;
@@ -338,52 +346,77 @@ export default function RequestModal({
                   ))}
                 </div>
 
-                {!isCompatibilityLoading && isNeedRequestMessage && (
-                  <div className="mt-4 flex flex-col gap-2">
-                    <div
-                      className={clsx(
-                        "flex items-start gap-2 rounded-xl px-3 py-2.5 text-[12px] font-medium",
-                        isLove
-                          ? "bg-rose-50 text-rose-600 border border-rose-200"
-                          : "bg-amber-50 text-amber-700 border border-amber-200",
-                      )}
+                {!sizeMatch && (
+                  <div className="mt-3 flex items-start gap-2 rounded-xl px-3 py-2.5 text-[12px] font-medium bg-orange-50 text-orange-700 border border-orange-200">
+                    <span
+                      className="material-symbols-outlined shrink-0"
+                      style={{ fontSize: 15, marginTop: 1 }}
                     >
-                      <span
-                        className="material-symbols-outlined shrink-0"
-                        style={{ fontSize: 15, marginTop: 1 }}
-                      >
-                        info
-                      </span>
-                      <span>
-                        {isLove
-                          ? "Low match score — send a message to introduce your dog and explain why they'd be a great match."
-                          : "Low compatibility score — a message to the host is required before you can send your request."}
-                      </span>
-                    </div>
-                    <p className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-wider mt-1">
-                      {isLove ? "Message to poster" : "Message to host"}{" "}
-                      <span className="text-red-400 normal-case font-normal">
-                        * required
-                      </span>
-                    </p>
-                    <textarea
-                      rows={3}
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder={
-                        isLove
-                          ? "Tell them why your dog would be a great match…"
-                          : "Tell the host why your dog would be a great fit…"
-                      }
-                      className={clsx(
-                        "w-full rounded-xl border bg-[#f7f7f6] px-3 py-2 text-[13px] text-[#1e293b] placeholder-[#94a3b8] outline-none resize-none",
-                        isLove
-                          ? "border-rose-200 focus:border-rose-400 focus:ring-1 focus:ring-rose-300"
-                          : "border-[#e1cfb7]/40 focus:border-[#e1cfb7] focus:ring-1 focus:ring-[#e1cfb7]",
-                      )}
-                    />
+                      straighten
+                    </span>
+                    <span>
+                      Size mismatch — this activity requires{" "}
+                      <span className="font-bold">
+                        {activitySizes?.join(", ")}
+                      </span>{" "}
+                      dogs, but your dog is{" "}
+                      <span className="font-bold">{selectedPet?.size}</span>.
+                      You can still request to join with a message.
+                    </span>
                   </div>
                 )}
+
+                {!isCompatibilityLoading &&
+                  (isNeedRequestMessage || !sizeMatch) && (
+                    <div className="mt-4 flex flex-col gap-2">
+                      {isNeedRequestMessage && (
+                        <div
+                          className={clsx(
+                            "flex items-start gap-2 rounded-xl px-3 py-2.5 text-[12px] font-medium",
+                            isLove
+                              ? "bg-rose-50 text-rose-600 border border-rose-200"
+                              : "bg-amber-50 text-amber-700 border border-amber-200",
+                          )}
+                        >
+                          <span
+                            className="material-symbols-outlined shrink-0"
+                            style={{ fontSize: 15, marginTop: 1 }}
+                          >
+                            info
+                          </span>
+                          <span>
+                            {isLove
+                              ? "Low match score — send a message to introduce your dog and explain why they'd be a great match."
+                              : "Low compatibility score — a message to the host is required before you can send your request."}
+                          </span>
+                        </div>
+                      )}
+                      <p className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-wider mt-1">
+                        {isLove ? "Message to poster" : "Message to host"}{" "}
+                        <span className="text-red-400 normal-case font-normal">
+                          * required
+                        </span>
+                      </p>
+                      <textarea
+                        rows={3}
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder={
+                          !sizeMatch
+                            ? "Explain why your dog should still be considered…"
+                            : isLove
+                              ? "Tell them why your dog would be a great match…"
+                              : "Tell the host why your dog would be a great fit…"
+                        }
+                        className={clsx(
+                          "w-full rounded-xl border bg-[#f7f7f6] px-3 py-2 text-[13px] text-[#1e293b] placeholder-[#94a3b8] outline-none resize-none",
+                          isLove
+                            ? "border-rose-200 focus:border-rose-400 focus:ring-1 focus:ring-rose-300"
+                            : "border-[#e1cfb7]/40 focus:border-[#e1cfb7] focus:ring-1 focus:ring-[#e1cfb7]",
+                        )}
+                      />
+                    </div>
+                  )}
               </div>
             </div>
           )}
@@ -398,18 +431,25 @@ export default function RequestModal({
               : "bg-[#f7f7f6]/80 border-[#e1cfb7]/20",
           )}
         >
-          {compatibility && isNeedRequestMessage && !message && (
-            <p className="text-center text-[11px] text-amber-600 font-medium mb-3">
-              Write a message above to enable your request
-            </p>
-          )}
+          {(compatibility || !sizeMatch) &&
+            isNeedRequestMessage &&
+            !message && (
+              <p className="text-center text-[11px] text-amber-600 font-medium mb-3">
+                Write a message above to enable your request
+              </p>
+            )}
           <button
             onClick={() =>
-              selectedId && onConfirm(selectedId, message || undefined)
+              selectedId &&
+              onConfirm(
+                selectedId,
+                message || undefined,
+                isNeedRequestMessage || !sizeMatch,
+              )
             }
             disabled={
               isCompatibilityLoading ||
-              !compatibility ||
+              (!compatibility && sizeMatch) ||
               (isNeedRequestMessage && !message) ||
               eligiblePets.length === 0
             }
