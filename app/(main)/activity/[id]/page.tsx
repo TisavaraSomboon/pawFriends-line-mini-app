@@ -798,6 +798,20 @@ function UserAction({
   const [selectedStartDate, setSelectedStartDate] = useState("");
   const [selectedEndDate, setSelectedEndDate] = useState("");
 
+  const attendeesByDate: Record<string, { image: string; name: string }[]> = {};
+  (activity?.attendees ?? []).forEach((a) => {
+    if (!a.startDate) return;
+    const start = dayjs(a.startDate).startOf("day");
+    const end = a.endDate ? dayjs(a.endDate).startOf("day") : start;
+    let current = start;
+    while (!current.isAfter(end)) {
+      const dateKey = current.format("YYYY-MM-DD");
+      if (!attendeesByDate[dateKey]) attendeesByDate[dateKey] = [];
+      attendeesByDate[dateKey].push({ image: a.image, name: a.name });
+      current = current.add(1, "day");
+    }
+  });
+
   const joinedCount =
     activity?.attendees?.filter((a) => a.status === "joined").length ?? 0;
   const isFull = !!activity?.maxDogs && joinedCount >= activity.maxDogs;
@@ -847,6 +861,7 @@ function UserAction({
         onStartChange={setSelectedStartDate}
         onEndChange={setSelectedEndDate}
         label="Pick a Date & Time"
+        attendeesByDate={attendeesByDate}
       />
       <Tooltip
         className="w-full mt-4"

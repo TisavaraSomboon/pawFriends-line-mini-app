@@ -173,42 +173,40 @@ export default function DateRangeCalendar({
                   {day.date()}
                 </p>
 
-                {readOnly ? (
-                  hasAttendees ? (
-                    <div className="flex -space-x-1 mt-0.5">
-                      {dateAttendees.slice(0, 2).map((a, idx) => (
-                        <div
-                          key={idx}
-                          className="w-4 h-4 rounded-full border border-white overflow-hidden bg-[#e2cfb7] shrink-0"
-                        >
-                          {a.image ? (
-                            <Image
-                              src={a.image}
-                              alt={a.name}
-                              width={16}
-                              height={16}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <span className="text-[6px] font-bold text-[#1e293b]">
-                                {a.name?.[0]?.toUpperCase() ?? "?"}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {dateAttendees.length > 2 && (
-                        <div className="w-4 h-4 rounded-full bg-[#1e293b] flex items-center justify-center border border-white shrink-0">
-                          <span className="text-[7px] font-bold text-white">
-                            +{dateAttendees.length - 2}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="h-4" />
-                  )
+                {hasAttendees ? (
+                  <div className="flex -space-x-1 mt-0.5">
+                    {dateAttendees.slice(0, 2).map((a, idx) => (
+                      <div
+                        key={idx}
+                        className="w-4 h-4 rounded-full border border-white overflow-hidden bg-[#e2cfb7] shrink-0"
+                      >
+                        {a.image ? (
+                          <Image
+                            src={a.image}
+                            alt={a.name}
+                            width={16}
+                            height={16}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-[6px] font-bold text-[#1e293b]">
+                              {a.name?.[0]?.toUpperCase() ?? "?"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {dateAttendees.length > 2 && (
+                      <div className="w-4 h-4 rounded-full bg-[#1e293b] flex items-center justify-center border border-white shrink-0">
+                        <span className="text-[7px] font-bold text-white">
+                          +{dateAttendees.length - 2}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : readOnly ? (
+                  <div className="h-4" />
                 ) : (
                   <div className="text-[9px] font-bold text-[#e2cfb7] leading-none">
                     {!isSingleDate && isSelected
