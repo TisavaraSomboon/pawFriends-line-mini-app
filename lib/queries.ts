@@ -352,7 +352,20 @@ export function useEndActivity(id: string) {
         body: JSON.stringify({ status: "ended" }),
       }),
     onSuccess: () => {
-      // Refresh the activity list after creating
+      queryClient.invalidateQueries({ queryKey: keys.activity(id) });
+    },
+  });
+}
+
+export function usePauseActivity(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiFetch(`/api/activities/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "paused" }),
+      }),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: keys.activity(id) });
     },
   });
@@ -706,7 +719,7 @@ export type Activity = {
   maxDogs: number;
   image?: string;
   images?: string[];
-  status: "active" | "ended";
+  status: "active" | "ended" | "paused";
   hostId: string;
   attendees: Attendee[];
   hostType?: "personal" | "business";

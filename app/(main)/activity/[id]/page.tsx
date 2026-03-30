@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import dayjs from "dayjs";
@@ -12,6 +13,7 @@ import {
   useActivity,
   useCreateAttendees,
   useEndActivity,
+  usePauseActivity,
   useProfile,
   useUpdateAttendee,
 } from "@/lib/queries";
@@ -104,6 +106,7 @@ export default function ActivityDetailPage() {
   const { data: allProfiles } = useProfile();
   const { data: activity, isFetching } = useActivity(id);
   const { mutate: endedActivity } = useEndActivity(id);
+  const { mutate: pauseActivity } = usePauseActivity(id);
   const isHost = allProfiles?.user?._id === activity?.owner._id;
   const isLove = activity?.type === "love";
 
@@ -144,6 +147,7 @@ export default function ActivityDetailPage() {
       showRequests={showRequests}
       setShowRequests={setShowRequests}
       onEnded={() => endedActivity()}
+      onPaused={() => pauseActivity()}
       isLove={isLove}
       isBusiness={activity?.hostType === "business"}
     />
@@ -327,7 +331,13 @@ export default function ActivityDetailPage() {
         <div className="flex-1 min-w-0 flex flex-col gap-0">
           {/* Hero images */}
           <HeroCarousel
-            images={activity?.images?.length ? activity.images : activity?.image ? [activity.image] : []}
+            images={
+              activity?.images?.length
+                ? activity.images
+                : activity?.image
+                  ? [activity.image]
+                  : []
+            }
             isLove={isLove}
             className={clsx(
               "w-full h-80 rounded-2xl mb-6",
@@ -626,7 +636,11 @@ function HeroCarousel({
     <div className={clsx("relative overflow-hidden", className)}>
       <div
         className="w-full h-full bg-center bg-cover bg-no-repeat transition-all duration-300"
-        style={{ backgroundImage: `url("${images[index]}")`, minHeight: "inherit", height: "inherit" }}
+        style={{
+          backgroundImage: `url("${images[index]}")`,
+          minHeight: "inherit",
+          height: "inherit",
+        }}
       >
         {isLove && (
           <div className="absolute inset-0 bg-gradient-to-t from-rose-900/30 to-transparent" />
@@ -636,17 +650,29 @@ function HeroCarousel({
         <>
           <button
             type="button"
-            onClick={() => setIndex((i) => (i - 1 + images.length) % images.length)}
+            onClick={() =>
+              setIndex((i) => (i - 1 + images.length) % images.length)
+            }
             className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/50 transition"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_left</span>
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 16 }}
+            >
+              chevron_left
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setIndex((i) => (i + 1) % images.length)}
             className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/50 transition"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chevron_right</span>
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 16 }}
+            >
+              chevron_right
+            </span>
           </button>
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
             {images.map((_, i) => (
@@ -656,7 +682,9 @@ function HeroCarousel({
                 onClick={() => setIndex(i)}
                 className={clsx(
                   "rounded-full transition-all",
-                  i === index ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50",
+                  i === index
+                    ? "w-4 h-1.5 bg-white"
+                    : "w-1.5 h-1.5 bg-white/50",
                 )}
               />
             ))}
@@ -679,7 +707,13 @@ function ActivityContent({
     <div>
       {/* Hero images */}
       <HeroCarousel
-        images={activity?.images?.length ? activity.images : activity?.image ? [activity.image] : []}
+        images={
+          activity?.images?.length
+            ? activity.images
+            : activity?.image
+              ? [activity.image]
+              : []
+        }
         isLove={isLove}
         className="relative w-full min-h-72"
       />
@@ -872,27 +906,39 @@ function UserAction({
   const hasSelectedDate = isPersonal || !!selectedStartDate;
 
   // For business: check if any of the user's pets already have a booking overlapping the selected slot
-  const isSlotAlreadyBooked = isBusiness && !!selectedStartDate && pets.some((pet) =>
-    activity?.attendees?.some((a) => {
-      if (a.attendeeId !== pet._id) return false;
-      const selStart = dayjs(selectedStartDate).startOf("day");
-      const selEnd = selectedEndDate ? dayjs(selectedEndDate).startOf("day") : selStart;
-      return (a.dateRanges ?? []).some((range) => {
-        if (!range.startDate) return false;
-        const aStart = dayjs(range.startDate).startOf("day");
-        const aEnd = range.endDate ? dayjs(range.endDate).startOf("day") : aStart;
-        // overlap: neither range ends before the other starts
-        return !aEnd.isBefore(selStart) && !aStart.isAfter(selEnd);
-      });
-    }),
-  );
+  const isSlotAlreadyBooked =
+    isBusiness &&
+    !!selectedStartDate &&
+    pets.some((pet) =>
+      activity?.attendees?.some((a) => {
+        if (a.attendeeId !== pet._id) return false;
+        const selStart = dayjs(selectedStartDate).startOf("day");
+        const selEnd = selectedEndDate
+          ? dayjs(selectedEndDate).startOf("day")
+          : selStart;
+        return (a.dateRanges ?? []).some((range) => {
+          if (!range.startDate) return false;
+          const aStart = dayjs(range.startDate).startOf("day");
+          const aEnd = range.endDate
+            ? dayjs(range.endDate).startOf("day")
+            : aStart;
+          // overlap: neither range ends before the other starts
+          return !aEnd.isBefore(selStart) && !aStart.isAfter(selEnd);
+        });
+      }),
+    );
 
   // Business allows multiple bookings; personal/other types block on isJoined
   const effectiveIsJoined = isBusiness ? false : isJoined;
   const effectiveIsPending = isBusiness ? false : isPending;
 
   const buttonDisabled =
-    isDisable || !hasSelectedDate || isFull || effectiveIsPending || effectiveIsJoined || isSlotAlreadyBooked;
+    isDisable ||
+    !hasSelectedDate ||
+    isFull ||
+    effectiveIsPending ||
+    effectiveIsJoined ||
+    isSlotAlreadyBooked;
 
   const tooltipLabel = isDisable
     ? "You need to add at least 1 pet to join this activity."
@@ -966,9 +1012,17 @@ function UserAction({
               "bg-slate-100 text-slate-400 border-2 border-slate-200 cursor-not-allowed":
                 isSlotAlreadyBooked,
               "bg-rose-500 text-white hover:bg-rose-600":
-                !effectiveIsJoined && !effectiveIsPending && !isSlotAlreadyBooked && isLove && !isFull,
+                !effectiveIsJoined &&
+                !effectiveIsPending &&
+                !isSlotAlreadyBooked &&
+                isLove &&
+                !isFull,
               "bg-[#e2cfb7] text-[#1e293b] hover:opacity-90":
-                !effectiveIsJoined && !effectiveIsPending && !isSlotAlreadyBooked && !isLove && !isFull,
+                !effectiveIsJoined &&
+                !effectiveIsPending &&
+                !isSlotAlreadyBooked &&
+                !isLove &&
+                !isFull,
               "bg-slate-200 text-slate-400 cursor-not-allowed": isFull,
               "opacity-50 pointer-events-none": buttonDisabled,
             },
@@ -1020,6 +1074,7 @@ function HostActions({
   showRequests,
   setShowRequests,
   onEnded,
+  onPaused,
   isLove,
   isBusiness = false,
 }: {
@@ -1029,12 +1084,15 @@ function HostActions({
   showRequests: boolean;
   setShowRequests: (v: boolean) => void;
   onEnded: () => void;
+  onPaused: () => void;
   isLove?: boolean;
   isBusiness?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const { mutate: updateAttendee } = useUpdateAttendee();
+  const [showCloseOptions, setShowCloseOptions] = useState(false);
+  const [showPauseConfirm, setShowPauseConfirm] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   // Fill every day in the attendee's booked range
@@ -1169,9 +1227,9 @@ function HostActions({
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2">
         <button
-          className="flex-1 h-14 bg-white border-2 border-[#e2cfb7] text-[#1e293b] font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[rgba(226,207,183,0.15)] transition-all active:scale-[0.98]"
+          className="flex-1 h-14 bg-white border-2 border-[#e2cfb7] text-[#1e293b] font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[rgba(226,207,183,0.15)] transition-all active:scale-[0.98] py-2"
           onClick={() => router.push(`/activity/edit/${activityId}`)}
         >
           <span className="material-symbols-outlined">edit</span>
@@ -1179,10 +1237,10 @@ function HostActions({
         </button>
         <button
           className={clsx(
-            "flex-1 h-14 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm active:scale-[0.98]",
+            "flex-1 h-14 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm active:scale-[0.98] py-3",
             isLove ? "bg-rose-500" : "bg-[#1e293b]",
           )}
-          onClick={() => setShowEndConfirm(true)}
+          onClick={() => setShowCloseOptions(true)}
         >
           <span className="material-symbols-outlined">
             {isLove ? "heart_broken" : "pets"}
@@ -1191,6 +1249,79 @@ function HostActions({
         </button>
       </div>
 
+      {/* Close options sheet */}
+      {showCloseOptions && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9998] flex items-end justify-center bg-black/40 backdrop-blur-sm px-4 pb-6 animate-in fade-in duration-150"
+            onClick={() => setShowCloseOptions(false)}
+          >
+            <div
+              className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="h-1 w-full bg-[#e2cfb7]" />
+              <div className="p-6 flex flex-col gap-4">
+                <h3 className="text-[17px] font-bold text-[#1e293b] text-center">
+                  {isLove ? "Close Match" : "Close Activity"}
+                </h3>
+                <button
+                  className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[rgba(226,207,183,0.6)] hover:bg-[#faf8f5] active:scale-[0.98] transition-all text-left"
+                  onClick={() => { setShowCloseOptions(false); setShowPauseConfirm(true); }}
+                >
+                  <div className="w-10 h-10 rounded-full bg-[rgba(226,207,183,0.3)] flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[20px] text-[#64748b]">pause_circle</span>
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-bold text-[#1e293b]">Pause temporarily</p>
+                    <p className="text-[12px] text-[#64748b] mt-0.5">Hide from discovery — you can reactivate later.</p>
+                  </div>
+                </button>
+                <button
+                  className="w-full flex items-center gap-4 p-4 rounded-2xl border border-red-100 hover:bg-red-50 active:scale-[0.98] transition-all text-left"
+                  onClick={() => { setShowCloseOptions(false); setShowEndConfirm(true); }}
+                >
+                  <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[20px] text-red-400">
+                      {isLove ? "heart_broken" : "cancel"}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-bold text-red-500">End permanently</p>
+                    <p className="text-[12px] text-[#64748b] mt-0.5">This cannot be undone.</p>
+                  </div>
+                </button>
+                <button
+                  className="w-full py-3 rounded-xl border border-[#e2e8f0] text-[13px] font-bold text-[#64748b] hover:bg-[#f8fafc] active:scale-95 transition-all"
+                  onClick={() => setShowCloseOptions(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )
+      }
+
+      {/* Pause confirm */}
+      <ConfirmModal
+        open={showPauseConfirm}
+        title="Pause activity?"
+        description="Your activity will be hidden from discovery. You can reactivate it anytime."
+        confirmLabel="Pause"
+        confirmClassName="bg-[#1e293b] text-white hover:bg-[#0f172a]"
+        icon={
+          <span className="material-symbols-outlined text-2xl text-[#64748b]">pause_circle</span>
+        }
+        onConfirm={() => {
+          setShowPauseConfirm(false);
+          onPaused();
+        }}
+        onCancel={() => setShowPauseConfirm(false)}
+      />
+
+      {/* End permanently confirm */}
       <ConfirmModal
         open={showEndConfirm}
         title={isLove ? "End Match?" : "End Activity?"}
@@ -1203,11 +1334,11 @@ function HostActions({
         confirmClassName={
           isLove
             ? "bg-rose-500 text-white hover:bg-rose-600"
-            : "bg-[#1e293b] text-white hover:bg-[#0f172a]"
+            : "bg-red-500 text-white hover:bg-red-600"
         }
         icon={
-          <span className="material-symbols-outlined text-2xl text-[#64748b]">
-            {isLove ? "heart_broken" : "pets"}
+          <span className="material-symbols-outlined text-2xl text-red-400">
+            {isLove ? "heart_broken" : "cancel"}
           </span>
         }
         onConfirm={() => {

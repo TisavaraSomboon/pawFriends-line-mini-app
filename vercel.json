@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/reset-ai-counts",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/reactivate-paused",
+      "schedule": "0 23 * * *"
     }
   ]
 }
