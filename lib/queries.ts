@@ -234,7 +234,9 @@ type WeekdaySlotInput = Record<
   { label: string; startTime: string; endTime: string; maxDogs: number }[]
 >;
 
-export async function uploadActivityImages(files: (File | string)[]): Promise<string[]> {
+export async function uploadActivityImages(
+  files: (File | string)[],
+): Promise<string[]> {
   const urls: string[] = [];
   for (const file of files) {
     if (typeof file === "string") {
@@ -261,7 +263,7 @@ export function useCreateActivity() {
   return useMutation({
     mutationFn: async (
       body: Partial<Omit<Activity, "_id" | "userId" | "image">> & {
-        image?: File[];
+        image?: (File | string)[];
         weekdaySlots?: WeekdaySlotInput;
       },
     ) => {
@@ -722,7 +724,7 @@ export type Activity = {
   amountOfAttendees: number;
   maxDogs: number;
   image?: string;
-  images?: string[];
+  images?: (string | File)[];
   status: "active" | "ended" | "paused";
   hostId: string;
   attendees: Attendee[];

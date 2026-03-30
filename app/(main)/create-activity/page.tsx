@@ -223,7 +223,7 @@ const defaultTime = {
 /* ── Page ── */
 export default function CreateActivityPage() {
   const router = useRouter();
-  const [coverFiles, setCoverFiles] = useState<File[]>([]);
+  const [coverFiles, setCoverFiles] = useState<(File | string)[]>([]);
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("dateRange");
   const [weekdaySlots, setWeekdaySlots] = useState<WeekdaySlots>({});
   const { toast } = useToast();
