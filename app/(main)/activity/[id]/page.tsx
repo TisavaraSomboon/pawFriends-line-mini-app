@@ -1250,7 +1250,8 @@ function HostActions({
       </div>
 
       {/* Close options sheet */}
-      {showCloseOptions && typeof document !== "undefined" &&
+      {showCloseOptions &&
+        typeof document !== "undefined" &&
         createPortal(
           <div
             className="fixed inset-0 z-[9998] flex items-end justify-center bg-black/40 backdrop-blur-sm px-4 pb-6 animate-in fade-in duration-150"
@@ -1267,19 +1268,31 @@ function HostActions({
                 </h3>
                 <button
                   className="w-full flex items-center gap-4 p-4 rounded-2xl border border-[rgba(226,207,183,0.6)] hover:bg-[#faf8f5] active:scale-[0.98] transition-all text-left"
-                  onClick={() => { setShowCloseOptions(false); setShowPauseConfirm(true); }}
+                  onClick={() => {
+                    setShowCloseOptions(false);
+                    setShowPauseConfirm(true);
+                  }}
                 >
                   <div className="w-10 h-10 rounded-full bg-[rgba(226,207,183,0.3)] flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-[20px] text-[#64748b]">pause_circle</span>
+                    <span className="material-symbols-outlined text-[20px] text-[#64748b]">
+                      pause_circle
+                    </span>
                   </div>
                   <div>
-                    <p className="text-[14px] font-bold text-[#1e293b]">Pause temporarily</p>
-                    <p className="text-[12px] text-[#64748b] mt-0.5">Hide from discovery — you can reactivate later.</p>
+                    <p className="text-[14px] font-bold text-[#1e293b]">
+                      Pause temporarily
+                    </p>
+                    <p className="text-[12px] text-[#64748b] mt-0.5">
+                      Hide from discovery — you can reactivate later.
+                    </p>
                   </div>
                 </button>
                 <button
                   className="w-full flex items-center gap-4 p-4 rounded-2xl border border-red-100 hover:bg-red-50 active:scale-[0.98] transition-all text-left"
-                  onClick={() => { setShowCloseOptions(false); setShowEndConfirm(true); }}
+                  onClick={() => {
+                    setShowCloseOptions(false);
+                    setShowEndConfirm(true);
+                  }}
                 >
                   <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-[20px] text-red-400">
@@ -1287,8 +1300,12 @@ function HostActions({
                     </span>
                   </div>
                   <div>
-                    <p className="text-[14px] font-bold text-red-500">End permanently</p>
-                    <p className="text-[12px] text-[#64748b] mt-0.5">This cannot be undone.</p>
+                    <p className="text-[14px] font-bold text-red-500">
+                      End permanently
+                    </p>
+                    <p className="text-[12px] text-[#64748b] mt-0.5">
+                      This cannot be undone.
+                    </p>
                   </div>
                 </button>
                 <button
@@ -1301,8 +1318,7 @@ function HostActions({
             </div>
           </div>,
           document.body,
-        )
-      }
+        )}
 
       {/* Pause confirm */}
       <ConfirmModal
@@ -1312,7 +1328,9 @@ function HostActions({
         confirmLabel="Pause"
         confirmClassName="bg-[#1e293b] text-white hover:bg-[#0f172a]"
         icon={
-          <span className="material-symbols-outlined text-2xl text-[#64748b]">pause_circle</span>
+          <span className="material-symbols-outlined text-2xl text-[#64748b]">
+            pause_circle
+          </span>
         }
         onConfirm={() => {
           setShowPauseConfirm(false);
