@@ -14,8 +14,8 @@ interface SingleProps {
 // Multi-image mode
 interface MultipleProps {
   multiple: true;
-  files: File[];
-  onChange: (files: File[]) => void;
+  files: (File | string)[];
+  onChange: (files: (File | string)[]) => void;
   photoPreview?: never;
   onFileChange?: never;
   onRemove?: never;
@@ -29,7 +29,9 @@ export default function PhotoUpload(props: PhotoUploadProps) {
   /* ── Multi-image mode ── */
   if (props.multiple) {
     const { files, onChange } = props;
-    const previews = files.map((f) => URL.createObjectURL(f));
+    const previews = files.map((f) =>
+      typeof f === "string" ? f : URL.createObjectURL(f),
+    );
 
     const MAX = 5;
 

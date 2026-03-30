@@ -43,18 +43,68 @@ const SIZE_OPTIONS: PetSizeCategory[] = ["XS", "SM", "MD", "LG", "XL"];
 
 const ACTIVITY_TAGS: Record<string, string[]> = {
   park: [
-    "🌿 Chilling", "🌳 Park", "✈️ Travel", "🎡 Amusement Park", "🛍️ Shopping",
-    "🛕 Temple", "🌙 Night Market", "🎬 Movie", "🏃 Running", "📖 Reading",
-    "🎵 Concert", "🚶 Walking", "🤝 Volunteer", "⚽ Sport", "🧘 Yoga",
-    "🔥 BBQ", "🍕 Pizza", "🥗 Vegan", "🍣 Buffet", "🍜 Ramen",
+    "🌿 Chilling",
+    "🌳 Park",
+    "✈️ Travel",
+    "🎡 Amusement Park",
+    "🛍️ Shopping",
+    "🛕 Temple",
+    "🌙 Night Market",
+    "🎬 Movie",
+    "🏃 Running",
+    "📖 Reading",
+    "🎵 Concert",
+    "🚶 Walking",
+    "🤝 Volunteer",
+    "⚽ Sport",
+    "🧘 Yoga",
+    "🔥 BBQ",
+    "🍕 Pizza",
+    "🥗 Vegan",
+    "🍣 Buffet",
+    "🍜 Ramen",
   ],
   love: ["✈️ Travel", "☕ Meetup", "🌳 Park", "🏠 Home", "🏢 Condo"],
-  training: ["✈️ Travel", "🌳 Park", "🏠 Home", "🏢 Condo", "⚽ Sport", "🤝 Volunteer", "🌲 Forest"],
-  sport: ["🏃 Running", "🚶 Walking", "⚽ Football", "🏊 Swimming", "🧘 Yoga", "🥾 Hiking", "🛝 Playground", "⚽ Sport"],
+  training: [
+    "✈️ Travel",
+    "🌳 Park",
+    "🏠 Home",
+    "🏢 Condo",
+    "⚽ Sport",
+    "🤝 Volunteer",
+    "🌲 Forest",
+  ],
+  sport: [
+    "🏃 Running",
+    "🚶 Walking",
+    "⚽ Football",
+    "🏊 Swimming",
+    "🧘 Yoga",
+    "🥾 Hiking",
+    "🛝 Playground",
+    "⚽ Sport",
+  ],
   travel: ["🏖️ Beach", "🏔️ Mountain", "🌲 Forest", "🌳 Park"],
-  grooming: ["🛁 Bath", "✂️ Haircare", "💅 Nail", "💄 Makeup", "👗 Dress Up", "🧹 Cleaning", "🩺 Anal Glands"],
+  grooming: [
+    "🛁 Bath",
+    "✂️ Haircare",
+    "💅 Nail",
+    "💄 Makeup",
+    "👗 Dress Up",
+    "🧹 Cleaning",
+    "🩺 Anal Glands",
+  ],
   hotel: ["✈️ Travel", "🛏️ Bed", "🏠 Home", "🏢 Condo"],
-  place: ["⛳ Artificial Turf", "🌿 Grass Field", "🛝 Playground", "🏠 Home", "🏢 Condo", "🌳 Park", "🏖️ Beach", "🏟️ Indoor Park"],
+  place: [
+    "⛳ Artificial Turf",
+    "🌿 Grass Field",
+    "🛝 Playground",
+    "🏠 Home",
+    "🏢 Condo",
+    "🌳 Park",
+    "🏖️ Beach",
+    "🏟️ Indoor Park",
+  ],
   custom: [],
 };
 
@@ -104,8 +154,10 @@ export default function EditActivityPage() {
   const { mutate: updateActivity, isPending } = useUpdateActivity(id);
   const { toast } = useToast();
 
-  const [coverFiles, setCoverFiles] = useState<File[]>([]);
-  const [scheduleMode, setScheduleMode] = useState<"dateRange" | "scheduler">("dateRange");
+  const [coverFiles, setCoverFiles] = useState<(File | string)[]>([]);
+  const [scheduleMode, setScheduleMode] = useState<"dateRange" | "scheduler">(
+    "dateRange",
+  );
   const [weekdaySlots, setWeekdaySlots] = useState<WeekdaySlots>({});
 
   const {
@@ -143,6 +195,7 @@ export default function EditActivityPage() {
     ].map((t) => t.id);
     const isCustomType = !knownTypes.includes(activity.type);
 
+    if (!!activity.images) setCoverFiles(activity.images);
     reset({
       title: activity.title ?? "",
       type: isCustomType ? "custom" : (activity.type ?? "park"),
@@ -174,7 +227,9 @@ export default function EditActivityPage() {
   if (isLoading) return <SpinLoader title="Loading activity" />;
   if (isPending) return <SpinLoader title="Saving changes" />;
 
-  const allTypes = isBusiness ? BUSINESS_ACTIVITY_TYPES : PERSONAL_ACTIVITY_TYPES;
+  const allTypes = isBusiness
+    ? BUSINESS_ACTIVITY_TYPES
+    : PERSONAL_ACTIVITY_TYPES;
 
   const onSubmit = async ({
     dogLimit,
@@ -256,20 +311,8 @@ export default function EditActivityPage() {
         {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="pb-16">
           <div className="max-w-lg mx-auto px-4 pt-5 flex flex-col gap-5">
-
             {/* Cover photo */}
             <div>
-              {activity?.image && coverFiles.length === 0 && (
-                <div className="mb-2 w-full h-44 rounded-2xl overflow-hidden">
-                  <Image
-                    src={activity.image}
-                    alt="Current cover"
-                    width={600}
-                    height={176}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
               <PhotoUpload
                 multiple
                 files={coverFiles}
@@ -292,7 +335,8 @@ export default function EditActivityPage() {
                     placeholder="Name your activity"
                     className={clsx(
                       inputClass,
-                      errors.title && "border-red-400 focus:border-red-400 focus:ring-red-100",
+                      errors.title &&
+                        "border-red-400 focus:border-red-400 focus:ring-red-100",
                     )}
                     value={field.value}
                     onChange={field.onChange}
@@ -347,7 +391,8 @@ export default function EditActivityPage() {
                   placeholder="e.g. Frisbee in the park"
                   className={clsx(
                     inputClass,
-                    errors.customType && "border-red-400 focus:border-red-400 focus:ring-red-100",
+                    errors.customType &&
+                      "border-red-400 focus:border-red-400 focus:ring-red-100",
                   )}
                   {...register("customType", {
                     validate: (v) =>
@@ -404,13 +449,21 @@ export default function EditActivityPage() {
             <div>
               <LocationAutoComplete
                 onSelect={(loc) => {
-                  setValue("locationName", loc.locationName, { shouldValidate: true });
+                  setValue("locationName", loc.locationName, {
+                    shouldValidate: true,
+                  });
                   setValue("latitude", loc.latitude);
                   setValue("longitude", loc.longitude);
                 }}
-                registration={register("locationName", { required: "Location is required." })}
+                registration={register("locationName", {
+                  required: "Location is required.",
+                })}
                 required
-                error={errors.locationName ? new Error(errors.locationName.message) : undefined}
+                error={
+                  errors.locationName
+                    ? new Error(errors.locationName.message)
+                    : undefined
+                }
               />
               {errors.locationName && (
                 <p className="text-[11px] text-red-500 mt-1 ml-0.5">
@@ -449,8 +502,12 @@ export default function EditActivityPage() {
                   <DateRangeCalendar
                     startDate={watchStartDate}
                     endDate={watchEndDate}
-                    onStartChange={(v) => setValue("startDate", v, { shouldValidate: true })}
-                    onEndChange={(v) => setValue("endDate", v, { shouldValidate: true })}
+                    onStartChange={(v) =>
+                      setValue("startDate", v, { shouldValidate: true })
+                    }
+                    onEndChange={(v) =>
+                      setValue("endDate", v, { shouldValidate: true })
+                    }
                   />
                 )}
               </>
@@ -459,8 +516,12 @@ export default function EditActivityPage() {
                 isSingleDate={isLove}
                 startDate={watchStartDate}
                 endDate={watchEndDate}
-                onStartChange={(v) => setValue("startDate", v, { shouldValidate: true })}
-                onEndChange={(v) => setValue("endDate", v, { shouldValidate: true })}
+                onStartChange={(v) =>
+                  setValue("startDate", v, { shouldValidate: true })
+                }
+                onEndChange={(v) =>
+                  setValue("endDate", v, { shouldValidate: true })
+                }
               />
             )}
 
@@ -553,10 +614,17 @@ export default function EditActivityPage() {
                     <div className="flex items-center gap-4">
                       <button
                         type="button"
-                        onClick={() => field.onChange(Math.max(1, field.value - 1))}
+                        onClick={() =>
+                          field.onChange(Math.max(1, field.value - 1))
+                        }
                         className="w-10 h-10 rounded-xl border border-[rgba(226,207,183,0.4)] bg-white flex items-center justify-center text-[#1e293b] hover:bg-[rgba(226,207,183,0.2)]"
                       >
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>remove</span>
+                        <span
+                          className="material-symbols-outlined"
+                          style={{ fontSize: 18 }}
+                        >
+                          remove
+                        </span>
                       </button>
                       <span className="text-[20px] font-bold text-[#1e293b] w-8 text-center">
                         {field.value}
@@ -566,7 +634,12 @@ export default function EditActivityPage() {
                         onClick={() => field.onChange(field.value + 1)}
                         className="w-10 h-10 rounded-xl border border-[rgba(226,207,183,0.4)] bg-white flex items-center justify-center text-[#1e293b] hover:bg-[rgba(226,207,183,0.2)]"
                       >
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+                        <span
+                          className="material-symbols-outlined"
+                          style={{ fontSize: 18 }}
+                        >
+                          add
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -589,7 +662,8 @@ export default function EditActivityPage() {
                     placeholder="Describe your activity…"
                     className={clsx(
                       "w-full rounded-[14px] border border-[rgba(226,207,183,0.4)] bg-white px-4 py-3 text-[14px] text-[#1e293b] placeholder-[#94a3b8] outline-none focus:border-[#e1cfb7] focus:ring-2 focus:ring-[rgba(226,207,183,0.3)] resize-none",
-                      errors.description && "border-red-400 focus:border-red-400 focus:ring-red-100",
+                      errors.description &&
+                        "border-red-400 focus:border-red-400 focus:ring-red-100",
                     )}
                     value={field.value}
                     onChange={field.onChange}

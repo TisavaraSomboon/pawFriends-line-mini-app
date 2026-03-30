@@ -478,7 +478,7 @@ export default function ActivityDetailPage() {
             >
               {isLove ? "💌 About This Match" : "About the Activity"}
             </h3>
-            <p className="text-[15px] text-[#475569] leading-relaxed">
+            <p className="text-[15px] text-[#475569] leading-relaxed whitespace-pre-wrap">
               {activity?.description}
             </p>
           </div>
@@ -847,7 +847,7 @@ function ActivityContent({
         >
           {isLove ? "💌 About This Match" : "About the Activity"}
         </h3>
-        <p className="text-[15px] text-[#475569] leading-relaxed">
+        <p className="text-[15px] text-[#475569] leading-relaxed whitespace-pre-wrap">
           {activity?.description}
         </p>
       </div>

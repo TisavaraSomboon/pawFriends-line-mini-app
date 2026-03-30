@@ -234,9 +234,13 @@ type WeekdaySlotInput = Record<
   { label: string; startTime: string; endTime: string; maxDogs: number }[]
 >;
 
-export async function uploadActivityImages(files: File[]): Promise<string[]> {
+export async function uploadActivityImages(files: (File | string)[]): Promise<string[]> {
   const urls: string[] = [];
   for (const file of files) {
+    if (typeof file === "string") {
+      urls.push(file);
+      continue;
+    }
     const ext = file.name.split(".").pop();
     const filePath = `${UploadSubDirectoryEnum.ACTIVITY_IMAGE}/${uuidv4()}.${ext}`;
     const { signedUrl } = await apiFetch<{ signedUrl: string }>(
