@@ -15,7 +15,7 @@ import SpinLoader from "@/components/SpinLoader";
 import RequestModal from "@/components/RequestModal";
 import { useRouter } from "next/navigation";
 
-const FILTERS = ["All Activities", "Nearby", "Today", "Playdates"] as const;
+const FILTERS = ["All Activities", "Nearby", "Today"] as const;
 type Filter = (typeof FILTERS)[number];
 
 export default function HomePage() {
@@ -31,6 +31,52 @@ export default function HomePage() {
 
   if (isUserPending || isActivitiesFetching || isActivitiesFetching)
     return <SpinLoader title="Loading home" />;
+
+  const NEARBY_KM = 20;
+  function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  const userLat = allProfiles?.user?.latitude;
+  const userLon = allProfiles?.user?.longitude;
+  const todayStr = new Date().toDateString();
+
+  const filteredActivities = (activities ?? []).filter((activity) => {
+    // Search
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const match =
+        activity.title?.toLowerCase().includes(q) ||
+        activity.description?.toLowerCase().includes(q) ||
+        activity.locationName?.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    // Today
+    if (activeFilter === "Today") {
+      if (!activity.startDate) return false;
+      if (new Date(activity.startDate).toDateString() !== todayStr)
+        return false;
+    }
+    // Nearby
+    if (activeFilter === "Nearby") {
+      if (!userLat || !userLon || !activity.latitude || !activity.longitude)
+        return false;
+      if (
+        distanceKm(userLat, userLon, activity.latitude, activity.longitude) >
+        NEARBY_KM
+      )
+        return false;
+    }
+    return true;
+  });
 
   return (
     <div className="flex min-h-dvh bg-[#f7f7f6] w-full">
@@ -131,11 +177,11 @@ export default function HomePage() {
           </button> */}
 
           <h2 className="text-xl font-bold tracking-tight text-[#1e293b] mb-4">
-            Upcoming Activities
+            Latest Events
           </h2>
 
           {/* Empty state */}
-          {(!activities || activities.length === 0) && (
+          {filteredActivities.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
               <div className="w-20 h-20 rounded-full bg-[rgba(226,207,183,0.2)] flex items-center justify-center">
                 <span
@@ -169,20 +215,21 @@ export default function HomePage() {
           )}
 
           {/* Mobile: stacked / Desktop: 2-col grid */}
-          {activities && activities.length > 0 && (
+          {filteredActivities.length > 0 && (
             <>
               <RequestModal
                 open={!!joinActivityId}
                 pets={allProfiles?.pets ?? []}
                 activityType={
-                  activities.find((a) => a._id === joinActivityId)?.type
+                  filteredActivities.find((a) => a._id === joinActivityId)?.type
                 }
                 activitySizes={
-                  activities.find((a) => a._id === joinActivityId)?.sizes
+                  filteredActivities.find((a) => a._id === joinActivityId)
+                    ?.sizes
                 }
                 onConfirm={(selectedId, message) => {
                   if (!joinActivityId) return;
-                  const activity = activities.find(
+                  const activity = filteredActivities.find(
                     (a) => a._id === joinActivityId,
                   );
                   const pet = allProfiles?.pets.find(
@@ -210,7 +257,7 @@ export default function HomePage() {
                 onCancel={() => setJoinActivityId(null)}
               />
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {activities.map((activity) => {
+                {filteredActivities.map((activity) => {
                   const badge = ACTIVITY_TYPE_BADGE[activity.type] ?? {
                     icon: "pets",
                     label: activity.type,

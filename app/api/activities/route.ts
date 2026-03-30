@@ -141,7 +141,15 @@ export async function GET(req: Request) {
         },
       },
       { $unset: "ownerId" },
-      { $sort: { date: 1 } },
+      {
+        $addFields: {
+          _sortDate: {
+            $ifNull: ["$startDate", new Date(8640000000000000)],
+          },
+        },
+      },
+      { $sort: { _sortDate: 1 } },
+      { $unset: "_sortDate" },
     ])
     .toArray();
 
