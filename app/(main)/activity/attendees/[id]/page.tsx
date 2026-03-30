@@ -23,6 +23,7 @@ type EnrichedAttendee = {
   breed?: string;
   size?: string;
   ownerName?: string;
+  ownerId?: string;
   locationName?: string;
   vaccine?: boolean;
   fleaTick?: boolean;
@@ -46,8 +47,9 @@ function AttendeeCard({ attendee }: { attendee: EnrichedAttendee }) {
     <div
       className="bg-white rounded-2xl border border-[#f1f5f9] px-4 py-4 flex items-start gap-3 w-full cursor-pointer active:scale-[0.99] transition-transform"
       onClick={() =>
+        attendee.ownerName &&
         attendee.attendeeId &&
-        router.push(`/profile/${attendee.attendeeId}`)
+        router.push(`/profile/${attendee.ownerId}?Id=${attendee.attendeeId}`)
       }
     >
       <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 bg-[#f1f5f9]">
@@ -89,10 +91,7 @@ function AttendeeCard({ attendee }: { attendee: EnrichedAttendee }) {
         {/* Breed · Size */}
         {(attendee.breed || attendee.size) && (
           <p className="text-[12px] text-[#64748b] truncate mb-1">
-            {[
-              attendee.breed,
-              attendee.size ? SIZE_LABEL[attendee.size] : null,
-            ]
+            {[attendee.breed, attendee.size ? SIZE_LABEL[attendee.size] : null]
               .filter(Boolean)
               .join(" · ")}
           </p>
@@ -101,7 +100,12 @@ function AttendeeCard({ attendee }: { attendee: EnrichedAttendee }) {
         {/* Owner */}
         {attendee.ownerName && (
           <span className="flex items-center gap-1 text-[11px] text-[#94a3b8] mb-2">
-            <span className="material-symbols-outlined" style={{ fontSize: 12 }}>person</span>
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 12 }}
+            >
+              person
+            </span>
             {attendee.ownerName}
           </span>
         )}
@@ -116,11 +120,14 @@ function AttendeeCard({ attendee }: { attendee: EnrichedAttendee }) {
                 : "bg-red-50 text-red-500 border-red-100",
             )}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>vaccines</span>
-            Vaccine
-            <span className="font-bold">
-              {attendee.vaccine ? "✓" : "✗"}
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 13 }}
+            >
+              vaccines
             </span>
+            Vaccine
+            <span className="font-bold">{attendee.vaccine ? "✓" : "✗"}</span>
           </span>
 
           <span
@@ -131,11 +138,14 @@ function AttendeeCard({ attendee }: { attendee: EnrichedAttendee }) {
                 : "bg-red-50 text-red-500 border-red-100",
             )}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>bug_report</span>
-            Flea &amp; Tick
-            <span className="font-bold">
-              {attendee.fleaTick ? "✓" : "✗"}
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 13 }}
+            >
+              bug_report
             </span>
+            Flea &amp; Tick
+            <span className="font-bold">{attendee.fleaTick ? "✓" : "✗"}</span>
           </span>
 
           <span
@@ -146,7 +156,12 @@ function AttendeeCard({ attendee }: { attendee: EnrichedAttendee }) {
                 : "bg-red-50 text-red-500 border-red-100",
             )}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 13 }}>id_card</span>
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 13 }}
+            >
+              id_card
+            </span>
             Dog ID
             <span className="font-bold">
               {attendee.microchipVerified ? "✓" : "✗"}
@@ -163,9 +178,19 @@ function AttendeeCard({ attendee }: { attendee: EnrichedAttendee }) {
               // TODO: open Google Maps in next phase
             }}
           >
-            <span className="material-symbols-outlined shrink-0" style={{ fontSize: 13 }}>location_on</span>
+            <span
+              className="material-symbols-outlined shrink-0"
+              style={{ fontSize: 13 }}
+            >
+              location_on
+            </span>
             <span className="truncate">{attendee.locationName}</span>
-            <span className="material-symbols-outlined shrink-0 opacity-60" style={{ fontSize: 11 }}>open_in_new</span>
+            <span
+              className="material-symbols-outlined shrink-0 opacity-60"
+              style={{ fontSize: 11 }}
+            >
+              open_in_new
+            </span>
           </button>
         )}
 

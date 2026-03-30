@@ -245,9 +245,7 @@ export default function HomePage() {
                         new Date(activity.endDate) < new Date()
                       }
                       isDisableRequest={
-                        !allProfiles || allProfiles.pets.length <= 0
-                      }
-                      allPetsJoined={
+                        activity.hostType !== "business" &&
                         !!allProfiles &&
                         allProfiles.pets.length > 0 &&
                         allProfiles.pets.every((pet) =>

@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, startTransition } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { clsx } from "clsx";
-import Image from "next/image";
 import {
   PetSizeCategory,
   useActivity,
@@ -186,16 +185,20 @@ export default function EditActivityPage() {
     },
   });
 
-  // Pre-fill form when activity loads
+  const initialized = useRef(false);
+
+  // Pre-fill form when activity loads (run once)
   useEffect(() => {
-    if (!activity) return;
+    if (!activity || initialized.current) return;
+    initialized.current = true;
+
     const knownTypes = [
       ...PERSONAL_ACTIVITY_TYPES,
       ...BUSINESS_ACTIVITY_TYPES,
     ].map((t) => t.id);
     const isCustomType = !knownTypes.includes(activity.type);
 
-    if (!!activity.images) setCoverFiles(activity.images);
+    if (activity.images) startTransition(() => setCoverFiles(activity.images!));
     reset({
       title: activity.title ?? "",
       type: isCustomType ? "custom" : (activity.type ?? "park"),

@@ -29,7 +29,6 @@ export interface ActivityCardProps {
   isOwner?: boolean;
   isExpired?: boolean;
   isDisableRequest?: boolean;
-  allPetsJoined?: boolean;
   onJoin?: () => void;
 }
 
@@ -51,7 +50,6 @@ export default function ActivityCard({
   isOwner,
   isExpired,
   isDisableRequest,
-  allPetsJoined,
   onJoin,
 }: ActivityCardProps) {
   const router = useRouter();
@@ -247,15 +245,15 @@ export default function ActivityCard({
                 className="w-full"
                 label={
                   <div className="text-wrap">
-                    {allPetsJoined
+                    {isDisableRequest
                       ? "All your pets already joined this activity."
                       : "You need to add at least 1 pet to join this activity."}
                   </div>
                 }
-                isDisable={!isDisableRequest && !allPetsJoined}
+                isDisable={!isDisableRequest}
               >
                 <button
-                  disabled={isDisableRequest || allPetsJoined}
+                  disabled={isDisableRequest}
                   onClick={(e) => {
                     e.preventDefault();
                     onJoin?.();
@@ -266,8 +264,7 @@ export default function ActivityCard({
                       ? "bg-rose-500 text-white"
                       : "bg-[#e2cfb7] text-[#1e293b]",
                     {
-                      "opacity-50 hover:opacity-50!":
-                        isDisableRequest || allPetsJoined,
+                      "opacity-50 hover:opacity-50!": isDisableRequest,
                     },
                   )}
                 >
