@@ -626,7 +626,7 @@ function HeroCarousel({
   isLove,
   className,
 }: {
-  images: string[];
+  images: (File | string)[];
   isLove?: boolean;
   className?: string;
 }) {

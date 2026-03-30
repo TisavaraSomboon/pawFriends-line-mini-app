@@ -51,7 +51,7 @@ function PetDetailReadOnly({ pet }: { pet: Pet }) {
               {pet.name}&apos;s Profile
             </h3>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2">
             {pet.microchipVerified ? (
               <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 w-fit">
                 <span
