@@ -54,7 +54,10 @@ function SkeletonSection() {
           <div key={i} className="flex items-start gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-[#f1f5f9] shrink-0 mt-0.5" />
             <div className="flex-1 space-y-1.5">
-              <div className="h-3 rounded-full bg-[#f1f5f9]" style={{ width: `${60 + i * 10}%` }} />
+              <div
+                className="h-3 rounded-full bg-[#f1f5f9]"
+                style={{ width: `${60 + i * 10}%` }}
+              />
             </div>
           </div>
         ))}
@@ -107,7 +110,7 @@ export default function PetInsightsCard({
         )}
         <div className="flex-1 min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[#7c5c2e] mb-0.5">
-            AI Care Guide
+            Care Guide
           </p>
           <h3 className="text-[17px] font-extrabold text-[#1e293b] leading-tight">
             {name}&apos;s Personalised Insights

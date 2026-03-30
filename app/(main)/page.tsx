@@ -50,6 +50,7 @@ export default function HomePage() {
   const todayStr = new Date().toDateString();
 
   const filteredActivities = (activities ?? []).filter((activity) => {
+    if (activity.status === "paused") return false;
     // Search
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -77,6 +78,13 @@ export default function HomePage() {
     }
     return true;
   });
+
+  const businessActivities = filteredActivities.filter(
+    (a) => a.hostType === "business",
+  );
+  const personalActivities = filteredActivities.filter(
+    (a) => a.hostType !== "business",
+  );
 
   return (
     <div className="flex min-h-dvh bg-[#f7f7f6] w-full">
@@ -176,11 +184,6 @@ export default function HomePage() {
             <span className="material-symbols-outlined">chevron_right</span>
           </button> */}
 
-          <h2 className="text-xl font-bold tracking-tight text-[#1e293b] mb-4">
-            Latest Events
-          </h2>
-
-          {/* Empty state */}
           {filteredActivities.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
               <div className="w-20 h-20 rounded-full bg-[rgba(226,207,183,0.2)] flex items-center justify-center">
@@ -214,7 +217,6 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Mobile: stacked / Desktop: 2-col grid */}
           {filteredActivities.length > 0 && (
             <>
               <RequestModal
@@ -224,8 +226,7 @@ export default function HomePage() {
                   filteredActivities.find((a) => a._id === joinActivityId)?.type
                 }
                 activitySizes={
-                  filteredActivities.find((a) => a._id === joinActivityId)
-                    ?.sizes
+                  filteredActivities.find((a) => a._id === joinActivityId)?.sizes
                 }
                 onConfirm={(selectedId, message) => {
                   if (!joinActivityId) return;
@@ -256,61 +257,135 @@ export default function HomePage() {
                 }}
                 onCancel={() => setJoinActivityId(null)}
               />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {filteredActivities.map((activity) => {
-                  const badge = ACTIVITY_TYPE_BADGE[activity.type] ?? {
-                    icon: "pets",
-                    label: activity.type,
-                  };
 
-                  return (
-                    <ActivityCard
-                      key={activity._id}
-                      id={activity._id}
-                      type={activity.type}
-                      image={activity.image ?? ""}
-                      imageAlt={activity.title}
-                      badgeIcon={badge.icon}
-                      badgeLabel={badge.label}
-                      title={activity.title}
-                      attendees={activity.attendees}
-                      extraCount={activity.maxDogs}
-                      startTime={
-                        activity.startDate
-                          ? formatStartTim(activity.startDate)
-                          : undefined
-                      }
-                      spotLeft={
-                        activity.amountOfAttendees - activity.attendees.length
-                      }
-                      hostAvatar={activity.owner.image}
-                      hostName={activity.owner.name}
-                      description={activity.description}
-                      isOwner={allProfiles?.user?._id === activity?.owner?._id}
-                      isExpired={
-                        !!activity.endDate &&
-                        new Date(activity.endDate) < new Date()
-                      }
-                      isDisableRequest={
-                        activity.hostType !== "business" &&
-                        !!allProfiles &&
-                        allProfiles.pets.length > 0 &&
-                        allProfiles.pets.every((pet) =>
-                          activity.attendees?.some((a) => a.name === pet.name),
-                        )
-                      }
-                      onJoin={() => {
-                        if (activity.hostType === "business") {
-                          router.push(`/activity/${activity._id}`);
-                          return;
-                        }
-                        if (allProfiles && allProfiles.pets.length > 0)
-                          setJoinActivityId(activity._id);
-                      }}
-                    />
-                  );
-                })}
-              </div>
+              {/* Business section */}
+              {businessActivities.length > 0 && (
+                <section className="mb-8">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span
+                      className="material-symbols-outlined text-[#e2cfb7]"
+                      style={{ fontSize: 20 }}
+                    >
+                      storefront
+                    </span>
+                    <h2 className="text-[17px] font-bold text-[#1e293b]">
+                      Business & Services
+                    </h2>
+                    <span className="ml-auto text-[12px] font-semibold text-[#94a3b8]">
+                      {businessActivities.length} place{businessActivities.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {businessActivities.map((activity) => {
+                      const badge = ACTIVITY_TYPE_BADGE[activity.type] ?? {
+                        icon: "storefront",
+                        label: activity.type,
+                      };
+                      return (
+                        <ActivityCard
+                          key={activity._id}
+                          id={activity._id}
+                          type={activity.type}
+                          image={activity.image ?? ""}
+                          imageAlt={activity.title}
+                          badgeIcon={badge.icon}
+                          badgeLabel={badge.label}
+                          title={activity.title}
+                          attendees={activity.attendees}
+                          extraCount={activity.maxDogs}
+                          startTime={
+                            activity.startDate
+                              ? formatStartTim(activity.startDate)
+                              : undefined
+                          }
+                          spotLeft={
+                            activity.amountOfAttendees - activity.attendees.length
+                          }
+                          hostAvatar={activity.owner.image}
+                          hostName={activity.owner.name}
+                          description={activity.description}
+                          isOwner={allProfiles?.user?._id === activity?.owner?._id}
+                          isExpired={
+                            !!activity.endDate &&
+                            new Date(activity.endDate) < new Date()
+                          }
+                          isDisableRequest={false}
+                          onJoin={() => router.push(`/activity/${activity._id}`)}
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {/* Personal section */}
+              {personalActivities.length > 0 && (
+                <section>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span
+                      className="material-symbols-outlined text-[#e2cfb7]"
+                      style={{ fontSize: 20 }}
+                    >
+                      pets
+                    </span>
+                    <h2 className="text-[17px] font-bold text-[#1e293b]">
+                      Community Events
+                    </h2>
+                    <span className="ml-auto text-[12px] font-semibold text-[#94a3b8]">
+                      {personalActivities.length} event{personalActivities.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {personalActivities.map((activity) => {
+                      const badge = ACTIVITY_TYPE_BADGE[activity.type] ?? {
+                        icon: "pets",
+                        label: activity.type,
+                      };
+                      return (
+                        <ActivityCard
+                          key={activity._id}
+                          id={activity._id}
+                          type={activity.type}
+                          image={activity.image ?? ""}
+                          imageAlt={activity.title}
+                          badgeIcon={badge.icon}
+                          badgeLabel={badge.label}
+                          title={activity.title}
+                          attendees={activity.attendees}
+                          extraCount={activity.maxDogs}
+                          startTime={
+                            activity.startDate
+                              ? formatStartTim(activity.startDate)
+                              : undefined
+                          }
+                          spotLeft={
+                            activity.amountOfAttendees - activity.attendees.length
+                          }
+                          hostAvatar={activity.owner.image}
+                          hostName={activity.owner.name}
+                          description={activity.description}
+                          isOwner={allProfiles?.user?._id === activity?.owner?._id}
+                          isExpired={
+                            !!activity.endDate &&
+                            new Date(activity.endDate) < new Date()
+                          }
+                          isDisableRequest={
+                            !!allProfiles &&
+                            allProfiles.pets.length > 0 &&
+                            allProfiles.pets.every((pet) =>
+                              activity.attendees?.some((a) => a.name === pet.name),
+                            )
+                          }
+                          onJoin={() => {
+                            if (allProfiles && allProfiles.pets.length > 0)
+                              setJoinActivityId(activity._id);
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
             </>
           )}
           <FeedbackSection />

@@ -18,7 +18,9 @@ import LocationAutoComplete from "@/components/LocationAutocomplete";
 import SpinLoader from "@/components/SpinLoader";
 import PhotoUpload from "@/components/PhotoUpload";
 import DateRangeCalendar from "@/components/DateRangeCalendar";
-import BusinessDateSlotPicker, { WeekdaySlots } from "@/components/BusinessDateSlotPicker";
+import BusinessDateSlotPicker, {
+  WeekdaySlots,
+} from "@/components/BusinessDateSlotPicker";
 
 /* ── Types ── */
 type HostType = "personal" | "business";
@@ -373,7 +375,20 @@ export default function CreateActivityPage() {
               )}
             />
 
-            <PhotoUpload multiple files={coverFiles} onChange={setCoverFiles} />
+            <div>
+              <label className={labelClass}>
+                Activity Photos <span className="text-red-400">*</span>
+              </label>
+              <p className="text-[11px] text-[#94a3b8] mb-2 ml-0.5">
+                At least 1 photo required. Add up to 5 — the first will be the
+                cover.
+              </p>
+              <PhotoUpload
+                multiple
+                files={coverFiles}
+                onChange={setCoverFiles}
+              />
+            </div>
 
             <Controller
               control={control}
@@ -606,20 +621,20 @@ function HostTypeSection({
       {
         id: "personal",
         icon: "🐾",
-        label: "Personal",
-        desc: "Free activities & events",
+        label: "Community / Personal",
+        desc: "Organising a free meetup, walk, or dog park hangout",
       },
       {
         id: "business",
         icon: "🏪",
-        label: "Business",
-        desc: "Dog services & venues",
+        label: "Business / Service",
+        desc: "Running a paid service — grooming, training, daycare, etc.",
       },
     ];
 
   return (
     <div>
-      <label className={labelClass}>Host Type</label>
+      <label className={labelClass}>Are you a business or an individual?</label>
       <div className="grid grid-cols-2 gap-2">
         {options.map((opt) => (
           <button
@@ -996,7 +1011,9 @@ function PetRequirementsSection({
               className="flex items-center justify-between bg-white border border-[rgba(226,207,183,0.4)] rounded-xl px-4 py-2.5"
             >
               <div className="flex items-center gap-2.5">
-                <span className="text-base leading-none">{getReqEmoji(req)}</span>
+                <span className="text-base leading-none">
+                  {getReqEmoji(req)}
+                </span>
                 <p className="text-[13px] font-semibold text-[#1e293b]">
                   {req}
                 </p>
@@ -1066,8 +1083,18 @@ function ScheduleModeToggle({
       <div className="grid grid-cols-2 gap-2">
         {(
           [
-            { id: "dateRange", icon: "date_range", label: "Date Range", desc: "Single start & end date" },
-            { id: "scheduler", icon: "calendar_view_week", label: "Scheduler", desc: "Pick dates & add slots" },
+            {
+              id: "dateRange",
+              icon: "date_range",
+              label: "Date Range",
+              desc: "Single start & end date",
+            },
+            {
+              id: "scheduler",
+              icon: "calendar_view_week",
+              label: "Scheduler",
+              desc: "Pick dates & add slots",
+            },
           ] as { id: ScheduleMode; icon: string; label: string; desc: string }[]
         ).map((opt) => (
           <button
@@ -1088,7 +1115,12 @@ function ScheduleModeToggle({
               {opt.icon}
             </span>
             <p className="text-[13px] font-bold text-[#1e293b]">{opt.label}</p>
-            <p className={clsx("text-[11px]", mode === opt.id ? "text-[#94a3b8]" : "text-[#64748b]")}>
+            <p
+              className={clsx(
+                "text-[11px]",
+                mode === opt.id ? "text-[#94a3b8]" : "text-[#64748b]",
+              )}
+            >
               {opt.desc}
             </p>
           </button>
@@ -1097,6 +1129,15 @@ function ScheduleModeToggle({
     </div>
   );
 }
+
+const SIZE_DETAILS: Record<PetSizeCategory, { label: string; weight: string }> =
+  {
+    XS: { label: "Extra Small", weight: "< 3 kg" },
+    SM: { label: "Small", weight: "3 – 10 kg" },
+    MD: { label: "Medium", weight: "11 – 15 kg" },
+    LG: { label: "Large", weight: "16 – 25 kg" },
+    XL: { label: "Extra Large", weight: "> 25 kg" },
+  };
 
 /* ── DogSizeSection ── */
 function DogSizeSection({
@@ -1114,22 +1155,57 @@ function DogSizeSection({
 
   return (
     <div>
-      <label className={labelClass}>Dog Size</label>
-      <div className="flex flex-wrap gap-2">
-        {SIZE_OPTIONS.map((size) => (
-          <button
-            key={size}
-            type="button"
-            onClick={() => toggle(size)}
-            className={`px-4 py-2 rounded-full text-[13px] font-bold border transition-all ${
-              value.includes(size)
-                ? "bg-[#1e293b] text-white border-[#1e293b]"
-                : "bg-white text-[#64748b] border-[#e2e8f0]"
-            }`}
-          >
-            {size}
-          </button>
-        ))}
+      <label className={labelClass}>
+        Accepted Dog Sizes
+        <span className="ml-1 font-normal text-[#94a3b8] text-[11px]">
+          — select all that apply
+        </span>
+      </label>
+      <div className="flex flex-col gap-2">
+        {SIZE_OPTIONS.map((size) => {
+          const { label, weight } = SIZE_DETAILS[size];
+          const selected = value.includes(size);
+          return (
+            <button
+              key={size}
+              type="button"
+              onClick={() => toggle(size)}
+              className={clsx(
+                "flex items-center justify-between px-4 py-2.5 rounded-xl border transition-all text-left",
+                selected
+                  ? "bg-[#1e293b] border-[#1e293b] text-white"
+                  : "bg-white border-[#e2e8f0] text-[#64748b] hover:border-[#e2cfb7]",
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <span
+                  className={clsx(
+                    "text-[13px] font-bold w-6",
+                    selected ? "text-white" : "text-[#1e293b]",
+                  )}
+                >
+                  {size}
+                </span>
+                <span
+                  className={clsx(
+                    "text-[13px]",
+                    selected ? "text-white/90" : "text-[#475569]",
+                  )}
+                >
+                  {label}
+                </span>
+              </div>
+              <span
+                className={clsx(
+                  "text-[12px] font-semibold",
+                  selected ? "text-white/70" : "text-[#94a3b8]",
+                )}
+              >
+                {weight}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -1172,6 +1248,15 @@ function DogLimitSection({
   );
 }
 
+const DESCRIPTION_PROMPTS: { icon: string; label: string; text: string }[] = [
+  { icon: "🎒", label: "What to bring", text: "What to bring: " },
+  { icon: "💰", label: "Price / fee", text: "Price: " },
+  { icon: "📞", label: "Contact", text: "Contact: " },
+  { icon: "🐕", label: "Dog behaviour", text: "Dog behaviour expected: " },
+  { icon: "🅿️", label: "Parking", text: "Parking: " },
+  { icon: "ℹ️", label: "Extra info", text: "Extra info: " },
+];
+
 /* ── DescriptionSection ── */
 function DescriptionSection({
   value,
@@ -1182,14 +1267,40 @@ function DescriptionSection({
   onChange: (v: string) => void;
   error?: string;
 }) {
+  const appendPrompt = (text: string) => {
+    const prefix = value && !value.endsWith("\n") ? "\n" : "";
+    onChange(value + prefix + text);
+  };
+
   return (
-    <div>
-      <label className={labelClass}>
-        Description <span className="text-red-400">*</span>
-      </label>
+    <div className="flex flex-col gap-2">
+      <div>
+        <label className={labelClass}>
+          Description <span className="text-red-400">*</span>
+        </label>
+        <p className="text-[11px] text-[#94a3b8] mt-0.5 ml-0.5">
+          Tell people what to expect — the more detail, the better.
+        </p>
+      </div>
+
+      {/* Prompt chips */}
+      <div className="flex flex-wrap gap-1.5">
+        {DESCRIPTION_PROMPTS.map((p) => (
+          <button
+            key={p.label}
+            type="button"
+            onClick={() => appendPrompt(p.text)}
+            className="flex items-center gap-1 px-3 py-1 rounded-full bg-white border border-[rgba(226,207,183,0.5)] text-[12px] font-semibold text-[#475569] hover:border-[#e2cfb7] hover:bg-[#faf8f5] active:scale-95 transition-all"
+          >
+            <span>{p.icon}</span>
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       <textarea
-        placeholder="Describe the activity, location details, and what to bring..."
-        rows={4}
+        placeholder={`e.g.\nMeeting point: Main gate of Lumphini Park\nWhat to bring: Water bowl, leash, poop bags\nRules: Friendly dogs only, keep on leash`}
+        rows={6}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={clsx(

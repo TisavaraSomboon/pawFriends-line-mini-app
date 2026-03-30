@@ -991,6 +991,7 @@ function UserAction({
           attendeesByDate={attendeesByDate}
           slots={activity?.slots}
           onSlotChange={setSelectedSlotId}
+          minAdvanceDays={2}
         />
       )}
       <Tooltip
