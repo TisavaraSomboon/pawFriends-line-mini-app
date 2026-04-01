@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
 import { activitiesCol } from "@/lib/db";
-import { getAuthUser } from "@/lib/auth";
 import { ObjectId } from "mongodb";
 
 // GET /api/activities
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get("userId");
-
-  const auth = await getAuthUser();
 
   const col = await activitiesCol();
 
@@ -38,7 +35,7 @@ export async function GET(req: Request) {
         $match: {
           status: "active",
           ...(userId && {
-            ownerId: new ObjectId(userId === "owner" ? auth?.userId : userId),
+            ownerId: new ObjectId(userId),
           }),
         },
       },
@@ -161,16 +158,13 @@ export async function POST(req: Request) {
   const body = await req.json();
   const col = await activitiesCol();
 
-  const auth = await getAuthUser();
-  if (!auth)
-    return NextResponse.json(
-      { error: "Can not found user who created this activity" },
-      { status: 401 },
-    );
+  const { ownerId, ...activityBody } = body;
+  if (!ownerId)
+    return NextResponse.json({ error: "ownerId is required" }, { status: 400 });
 
   const result = await col.insertOne({
-    ...body,
-    ownerId: new ObjectId(auth.userId),
+    ...activityBody,
+    ownerId: new ObjectId(ownerId),
     status: "active",
     createdAt: new Date(),
     updatedAt: new Date(),

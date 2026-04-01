@@ -2,8 +2,6 @@
 
 import { useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
-import { useLogout } from "@/lib/queries";
 
 type MenuItem = {
   icon: string;
@@ -23,13 +21,9 @@ export default function SettingsMenu({
   onClose,
   anchorRef,
 }: SettingsMenuProps) {
-  const router = useRouter();
-  const { mutateAsync: logout } = useLogout();
   const menuRef = useRef<HTMLDivElement>(null);
   const mobileSheetRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click — desktop only. Must also exclude the mobile sheet
-  // (portalled to body, so NOT inside menuRef) to avoid killing click events.
   useEffect(() => {
     if (!open) return;
     function handlePointerDown(e: PointerEvent) {
@@ -45,17 +39,7 @@ export default function SettingsMenu({
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [open, onClose, anchorRef]);
 
-  const items: MenuItem[] = [
-    {
-      icon: "logout",
-      label: "Logout",
-      danger: true,
-      onClick: () => {
-        onClose();
-        logout().then(() => router.replace("/login"));
-      },
-    },
-  ];
+  const items: MenuItem[] = [];
 
   if (!open) return null;
 
@@ -64,21 +48,17 @@ export default function SettingsMenu({
       {/* ── Mobile: bottom sheet — portalled to body to escape stacking context ── */}
       {createPortal(
         <div ref={mobileSheetRef} className="sm:hidden">
-          {/* Backdrop — captures outside taps to close */}
           <div
             className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm animate-in fade-in duration-150"
             onClick={onClose}
           >
-            {/* Sheet — child of backdrop; stopPropagation prevents taps bubbling to onClose */}
             <div
               className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl pb-safe animate-in slide-in-from-bottom duration-200"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Handle */}
               <div className="flex justify-center pt-3 pb-1">
                 <div className="w-10 h-1 rounded-full bg-[#e2e8f0]" />
               </div>
-
               <div className="px-4 pt-2 pb-6 flex flex-col gap-1">
                 {items.map((item) => (
                   <button
@@ -109,7 +89,7 @@ export default function SettingsMenu({
         document.body,
       )}
 
-      {/* ── Desktop: dropdown (no portal needed — stacking context is fine on desktop) ── */}
+      {/* ── Desktop: dropdown ── */}
       <div
         ref={menuRef}
         className="hidden sm:block absolute right-0 top-full mt-2 w-44 bg-white rounded-2xl shadow-xl border border-[#f1f5f9] overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150"

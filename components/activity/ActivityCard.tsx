@@ -2,9 +2,9 @@ import clsx from "clsx";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Tooltip from "./Tooltip";
 import { userProfile } from "@/lib/constants";
 import AttendeeGrid from "./AttendeeGrid";
+import Tooltip from "../Tooltip";
 
 interface Attendees {
   image: string;

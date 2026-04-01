@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { clsx } from "clsx";
 import {
-  useAuthUser,
   useUpdateProfile,
   useIncrementAiPhotoCount,
-  useCheckName,
   useProfile,
   useGeneratePhoto,
 } from "@/lib/queries";
@@ -62,10 +60,10 @@ function FieldError({ message }: { message?: string }) {
 /* ── Page ── */
 export default function EditProfilePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  const { data: user } = useAuthUser();
-  const userId = user?._id;
+  const userId = searchParams.get("userId") ?? undefined;
 
   const { data: profileInfo, isPending: isUserLoading } = useProfile(userId);
 
@@ -77,7 +75,6 @@ export default function EditProfilePage() {
     userId,
     "aiProfilePhotoCount",
   );
-  const { mutateAsync: checkName } = useCheckName();
   const { mutateAsync: generatePhoto } = useGeneratePhoto(
     `dog owner profile portrait by their gender ${userInfo?.gender}. The photo should be a close-up headshot with a warm, friendly vibe, suitable for a social app profile. Always a single person in the image without dog.`,
   );
@@ -228,11 +225,6 @@ export default function EditProfilePage() {
                 maxLength: {
                   value: 25,
                   message: "Name cannot exceed 25 characters.",
-                },
-                validate: async (value) => {
-                  if (!value.trim()) return true;
-                  const { available } = await checkName(value);
-                  return available || "This name is already taken.";
                 },
               })}
               maxLength={25}

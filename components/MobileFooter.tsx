@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <nav className="md:hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full bg-white border-t border-[#f1f5f9] px-6 py-3 flex justify-between items-center z-20">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full bg-white border-t border-[#f1f5f9] px-6 py-3 flex justify-between items-center z-20">
       <Link
         href="/"
         className="flex flex-col items-center gap-1 text-[#e2cfb7]"
@@ -12,24 +12,15 @@ export default function Footer() {
           Home
         </span>
       </Link>
-      <div className="flex flex-col items-center gap-1 text-[#cbd5e1] cursor-not-allowed select-none relative">
-        <span className="material-symbols-outlined">calendar_today</span>
-        <span className="text-[10px] font-bold uppercase tracking-wider">
-          Discovery
-        </span>
-        <span className="absolute -top-1 -right-2 text-[8px] font-bold uppercase tracking-wider bg-[#f1f5f9] text-[#94a3b8] px-1.5 py-0.5 rounded-full leading-none">
-          Soon
-        </span>
-      </div>
-      {/* <Link
-        href="/discovery"
+      <Link
+        href="/bookings"
         className="flex flex-col items-center gap-1 text-[#94a3b8]"
       >
         <span className="material-symbols-outlined">calendar_today</span>
         <span className="text-[10px] font-bold uppercase tracking-wider">
-          Discovery
+          bookings
         </span>
-      </Link> */}
+      </Link>
       <div className="relative -top-5">
         <Link
           href="/create-activity"
@@ -38,15 +29,15 @@ export default function Footer() {
           <span className="material-symbols-outlined text-[30px]">add</span>
         </Link>
       </div>
-      <div className="flex flex-col items-center gap-1 text-[#cbd5e1] cursor-not-allowed select-none relative">
+      <Link
+        href="/chat"
+        className="flex flex-col items-center gap-1 text-[#94a3b8]"
+      >
         <span className="material-symbols-outlined">pets</span>
         <span className="text-[10px] font-bold uppercase tracking-wider">
           Chat
         </span>
-        <span className="absolute -top-1 -right-2 text-[8px] font-bold uppercase tracking-wider bg-[#f1f5f9] text-[#94a3b8] px-1.5 py-0.5 rounded-full leading-none">
-          Soon
-        </span>
-      </div>
+      </Link>
       <Link
         href="/profile"
         className="flex flex-col items-center gap-1 text-[#94a3b8]"

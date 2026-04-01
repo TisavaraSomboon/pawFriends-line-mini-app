@@ -7,12 +7,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { useRouter } from "next/navigation";
-import {
-  PlacePrediction,
-  useAuthUser,
-  usePlacesAutocomplete,
-} from "@/lib/queries";
+import { PlacePrediction, usePlacesAutocomplete } from "@/lib/queries";
 
 // True only on the client after hydration (server always returns false)
 export function useMounted() {
@@ -21,51 +16,6 @@ export function useMounted() {
     () => true, // client snapshot
     () => false, // server snapshot
   );
-}
-
-// True once window "load" fires (all images + fonts + assets ready)
-function usePageReady() {
-  return useSyncExternalStore(
-    (cb) => {
-      window.addEventListener("load", cb);
-      return () => window.removeEventListener("load", cb);
-    },
-    () => document.readyState === "complete",
-    () => false,
-  );
-}
-
-// Use in login/register pages — redirects to home if already logged in
-export function useRequireGuest() {
-  const router = useRouter();
-  const { data: user, isLoading } = useAuthUser();
-
-  useEffect(() => {
-    if (!isLoading && user) {
-      router.replace("/");
-    }
-  }, [user, isLoading, router]);
-
-  return { isLoading };
-}
-
-// Use in protected pages — redirects to login if not logged in
-export function useRequireAuth() {
-  const router = useRouter();
-  const { data: user, isLoading: authLoading } = useAuthUser();
-  const mounted = useMounted();
-  const pageReady = usePageReady();
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace("/login");
-    }
-  }, [user, authLoading, router]);
-
-  // Show skeleton until: hydrated + assets loaded + auth checked
-  const isLoading = !mounted || !pageReady || authLoading;
-
-  return { user, isLoading };
 }
 
 export function useLocationAutocomplete() {

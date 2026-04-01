@@ -24,7 +24,7 @@ import clsx from "clsx";
 import Tooltip from "@/components/Tooltip";
 import ConfirmModal from "@/components/ConfirmModal";
 import DateRangeCalendar from "@/components/DateRangeCalendar";
-import AttendeeGrid from "@/components/AttendeeGrid";
+import AttendeeGrid from "@/components/activity/AttendeeGrid";
 
 const FALLBACK_AVATAR =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuBuzALWachO_YIj8n2rR-FLfaEYVj3LhYbo9hEjMEUR56kinTG63BRNgCKCr2UY94D71unYWxE4HXlvQwfOO6iH5U14SS6xGwZ_t0JPr2LaSWERa91zC5xmVFEP1EPhKdJ8RdW5EyNIgXqHO7I6fzubsaAgzj3wVnSlk40Xx5Gytefc7WB8s58QJOPu9U94Y_MWJX_HM2WRhjYJkQs6lMuDySUnFmGBw_Wn7XDJFOAxscL2Izuf3UznPYuNQVRv0x5nqBzhRT1i-uJ3";

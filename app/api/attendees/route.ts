@@ -1,4 +1,3 @@
-import { getAuthUser } from "@/lib/auth";
 import { attendeesCol } from "@/lib/db";
 import { getDb } from "@/lib/mongodb";
 import { NextResponse } from "next/server";
@@ -114,11 +113,6 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const auth = await getAuthUser();
-
-  if (!auth)
-    return NextResponse.json({ error: "Can not found user" }, { status: 401 });
-
   const db = await getDb();
 
   const result = await db.collection("attendees").insertOne({
@@ -143,11 +137,6 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   const body = await req.json();
-  const auth = await getAuthUser();
-
-  if (!auth)
-    return NextResponse.json({ error: "Can not found user" }, { status: 401 });
-
   const col = await attendeesCol();
 
   await col.updateOne(

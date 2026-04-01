@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { getAuthUser } from "@/lib/auth";
 import { Pet } from "@/lib/queries";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const petId = searchParams.get("petId");
   const userId = searchParams.get("userId");
-
-  const auth = await getAuthUser();
 
   if (!petId && !userId) {
     return NextResponse.json(
@@ -30,25 +27,27 @@ export async function GET(req: Request) {
   }
 
   // By userId → all pets belonging to that user
-  const ownerId = userId === "owner" ? auth?.userId : userId!;
   const pets = await db
     .collection("pets")
-    .find({ ownerId: new ObjectId(ownerId!) }, { projection: { password: 0 } })
+    .find({ ownerId: new ObjectId(userId!) }, { projection: { password: 0 } })
     .toArray();
   return NextResponse.json(pets);
 }
 
 export async function POST(req: Request) {
-  const auth = await getAuthUser();
-  const body: Omit<Pet, "_id"> = await req.json();
+  const body: Omit<Pet, "_id"> & { ownerId: string } = await req.json();
+
+  if (!body.ownerId)
+    return NextResponse.json({ error: "ownerId is required" }, { status: 400 });
 
   const db = await getDb();
 
   const petId = new ObjectId();
+  const { ownerId, ...petBody } = body;
   await db.collection("pets").insertOne({
     _id: petId,
-    ownerId: new ObjectId(auth!.userId),
-    ...body,
+    ownerId: new ObjectId(ownerId),
+    ...petBody,
     createdAt: new Date(),
     updatedAt: new Date(),
   });

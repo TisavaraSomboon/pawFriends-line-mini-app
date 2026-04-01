@@ -1,32 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import { validatePassword, validateEmail } from "@/lib/validation";
 import { v4 as uuidv4 } from "uuid";
-import { FLAGS } from "@/lib/flags";
 
-// ─── Username generator ────────────────────────────────────────────────────────
-// Pattern: {CleanedLocalPart}#{1000-9999}  e.g. JohnDoe#3847
-// Deterministic from email — same input always produces the same name.
-// Split on "#" to separate identity (JohnDoe) from instance (3847).
-
-function hashCode(str: string): number {
-  let h = 5381;
-  for (let i = 0; i < str.length; i++) {
-    h = ((h << 5) + h) ^ str.charCodeAt(i);
-  }
-  return Math.abs(h);
-}
-
-function generateUsername(email: string): string {
-  const local = email.split("@")[0];
-  const cleaned = local
-    .split(/[._\-+]/)
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
-    .join("")
-    .replace(/[^a-zA-Z0-9]/g, "");
-  const num = String((hashCode(email) % 9000) + 1000); // 1000–9999
-  return `${cleaned}#${num}`;
-}
 
 async function uploadImage(image?: File | string) {
   let imageUrl: string | undefined =
@@ -594,116 +569,6 @@ export function useVerifyPetCard() {
         method: "POST",
         body: JSON.stringify(body),
       }),
-  });
-}
-
-// ─── Auth ──────────────────────────────────────────────────────────────────────
-
-export function useLogin() {
-  return useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) =>
-      apiFetch<User>("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      }),
-    // Cookie is set by the server — nothing extra needed here
-  });
-}
-
-export function useLogout() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => apiFetch("/api/auth/logout", { method: "POST" }),
-    onSuccess: () => {
-      queryClient.clear();
-      // Stamp null immediately — no re-fetch needed, cookies are already gone.
-      // Any observer (useRequireGuest / useRequireAuth) gets isLoading:false + user:null instantly.
-      queryClient.setQueryData(["authUser"], null);
-    },
-  });
-}
-
-export function useAuthUser() {
-  return useQuery({
-    queryKey: ["authUser"],
-    // clears both cookies and returns null, which triggers useRequireAuth
-    // to redirect to /login.
-    queryFn: () =>
-      fetch("/api/auth/user").then((res) => {
-        if (!res.ok) return null;
-        return res.json() as Promise<User | null>;
-      }),
-    staleTime: Infinity, // never auto-refetch on a timer
-    refetchOnWindowFocus: true, // re-validate when user returns to the tab
-    retry: false,
-  });
-}
-
-export function useRegister() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) => {
-      const emailError = validateEmail(email);
-      if (emailError) throw new Error(emailError);
-
-      if (FLAGS.PASSWORD_AUTH) {
-        const { valid, error } = validatePassword(password);
-        if (!valid) throw new Error(error);
-      }
-
-      const defaultValue = {
-        name: generateUsername(email),
-        image:
-          "https://lh3.googleusercontent.com/aida-public/AB6AXuC4gSy4vsT1ox_x5hsjIqAmtZvDGD0M2bz-Uc-S4ZXfvNx36-WMJIw3A_wTsq5V3SCLMA0WH42p17-dMPIzXglkeUOsDRV-KMglvxdMqsn5otPKKYnZfGay0Fk_LhmBHFeJ4_NfpSYIs7vhmz6q1rhpFMxBbLcBPoX-yVbc24dWvSWvzrFNg1QiLhlGhPL_SzzADktBskiBTdfJEpQrIn9IMdb1Z_YpxruXx7w06DoBG4mT7U1Xj0bE8scY1OKxCaOPohC1dB1pm-8c",
-        locationName: "Thailand",
-        latitude: undefined,
-        longitude: undefined,
-        bio: '"Tell us about yourself and your dog!"',
-        followers: 0,
-        following: 0,
-        rating: 0,
-        tier: Tier.Beginner,
-      };
-
-      return apiFetch<{ id: string }>("/api/auth/register", {
-        method: "POST",
-        body: JSON.stringify({ email, password, ...defaultValue }),
-      });
-    },
-    onSuccess: () => {
-      // Cookie is now set server-side — force authUser to refetch so
-      // useRequireAuth sees the new user instead of null.
-      queryClient.invalidateQueries({ queryKey: ["authUser"] });
-    },
-  });
-}
-
-export function useSendOtp() {
-  return useMutation({
-    mutationFn: (email: string) =>
-      apiFetch("/api/auth/send-otp", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      }),
-  });
-}
-
-export function useVerifyOtp() {
-  return useMutation({
-    mutationFn: ({ email, code }: { email: string; code: string }) =>
-      apiFetch("/api/auth/verify-otp", {
-        method: "POST",
-        body: JSON.stringify({ email, code }),
-      }),
-  });
-}
-
-export function useCheckName() {
-  return useMutation({
-    mutationFn: (name: string) =>
-      apiFetch<{ available: boolean }>(
-        `/api/users/check-name?name=${encodeURIComponent(name)}`,
-      ),
   });
 }
 

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { activitySlotsCol } from "@/lib/db";
-import { getAuthUser } from "@/lib/auth";
 import { ObjectId } from "mongodb";
 
 // GET /api/activity-slot?activityId=xxx
@@ -23,9 +22,6 @@ export async function GET(req: Request) {
 
 // POST /api/activity-slot
 export async function POST(req: Request) {
-  const auth = await getAuthUser();
-  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const body = await req.json();
   const { activityId, label, weekday, startTime, endTime, maxDogs } = body;
 
@@ -53,9 +49,6 @@ export async function POST(req: Request) {
 
 // PATCH /api/activity-slot — push attendeeId into attendeesID
 export async function PATCH(req: Request) {
-  const auth = await getAuthUser();
-  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const { slotId, attendeeId } = await req.json();
   if (!slotId || !attendeeId)
     return NextResponse.json({ error: "slotId and attendeeId are required" }, { status: 400 });
@@ -71,9 +64,6 @@ export async function PATCH(req: Request) {
 
 // DELETE /api/activity-slot?id=xxx
 export async function DELETE(req: Request) {
-  const auth = await getAuthUser();
-  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
 

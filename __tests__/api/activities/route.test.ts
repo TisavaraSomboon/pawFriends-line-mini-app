@@ -2,14 +2,9 @@ import { GET, POST } from '@/app/api/activities/route';
 
 // ── mocks ──────────────────────────────────────────────────────────────────
 const mockActivitiesCol = jest.fn();
-const mockGetAuthUser = jest.fn();
 
 jest.mock('@/lib/db', () => ({
   activitiesCol: (...args: unknown[]) => mockActivitiesCol(...args),
-}));
-
-jest.mock('@/lib/auth', () => ({
-  getAuthUser: (...args: unknown[]) => mockGetAuthUser(...args),
 }));
 
 jest.mock('next/server', () => ({
@@ -45,7 +40,6 @@ const sampleActivity = {
 describe('GET /api/activities', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetAuthUser.mockResolvedValue({ userId: 'user-123', email: 'host@example.com' });
   });
 
   it('returns a list of active activities', async () => {
@@ -61,20 +55,6 @@ describe('GET /api/activities', () => {
     expect(res._body).toEqual([sampleActivity]);
     expect(mockFind).toHaveBeenCalledWith(expect.objectContaining({ status: 'active' }));
   });
-
-  it('filters by userId when provided', async () => {
-    const mockToArray = jest.fn().mockResolvedValue([]);
-    const mockSort = jest.fn().mockReturnValue({ toArray: mockToArray });
-    const mockFind = jest.fn().mockReturnValue({ sort: mockSort });
-    mockActivitiesCol.mockResolvedValue({ find: mockFind });
-
-    const req = makeGetRequest('?userId=abc123');
-    await GET(req);
-
-    expect(mockFind).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'active', userId: 'abc123' }),
-    );
-  });
 });
 
 describe('POST /api/activities', () => {
@@ -82,21 +62,23 @@ describe('POST /api/activities', () => {
     jest.clearAllMocks();
   });
 
-  it('returns 401 when the user is not authenticated', async () => {
-    mockGetAuthUser.mockResolvedValue(null);
+  it('returns 400 when ownerId is missing', async () => {
     const req = makePostRequest({ title: 'Dog Park Meetup', locationName: 'Central Park' });
     const res = await POST(req) as unknown as { _body: { error: string }; status: number };
-    expect(res.status).toBe(401);
-    expect(res._body.error).toContain('Can not found user');
+    expect(res.status).toBe(400);
+    expect(res._body.error).toContain('ownerId');
   });
 
   it('returns 201 with the inserted id on success', async () => {
     const insertedId = '507f1f77bcf86cd799439011';
-    mockGetAuthUser.mockResolvedValue({ userId: '507f1f77bcf86cd799439022', email: 'host@example.com' });
     const mockInsertOne = jest.fn().mockResolvedValue({ insertedId });
     mockActivitiesCol.mockResolvedValue({ insertOne: mockInsertOne });
 
-    const req = makePostRequest({ title: 'Dog Park Meetup', locationName: 'Central Park' });
+    const req = makePostRequest({
+      title: 'Dog Park Meetup',
+      locationName: 'Central Park',
+      ownerId: '507f1f77bcf86cd799439022',
+    });
     const res = await POST(req) as unknown as { _body: { id: string }; status: number };
 
     expect(res.status).toBe(201);
@@ -104,11 +86,10 @@ describe('POST /api/activities', () => {
   });
 
   it('sets status to "active" and timestamps on insert', async () => {
-    mockGetAuthUser.mockResolvedValue({ userId: '507f1f77bcf86cd799439022', email: 'host@example.com' });
     const mockInsertOne = jest.fn().mockResolvedValue({ insertedId: '507f1f77bcf86cd799439011' });
     mockActivitiesCol.mockResolvedValue({ insertOne: mockInsertOne });
 
-    const req = makePostRequest({ title: 'Meetup' });
+    const req = makePostRequest({ title: 'Meetup', ownerId: '507f1f77bcf86cd799439022' });
     await POST(req);
 
     const insertedDoc = mockInsertOne.mock.calls[0][0];

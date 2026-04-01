@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { getAuthUser } from "@/lib/auth";
 import { User } from "@/lib/queries";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const auth = await getAuthUser();
-
-  const userId = searchParams.get("userId") ?? auth?.userId;
+  const userId = searchParams.get("userId");
+  if (!userId)
+    return NextResponse.json({ error: "userId is required" }, { status: 400 });
 
   const db = await getDb();
 
