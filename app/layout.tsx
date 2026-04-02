@@ -3,6 +3,7 @@ import "./globals.css";
 import QueryProvider from "@/components/QueryProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ToastProvider } from "@/components/Toast";
+import LiffProvider from "@/components/LiffProvider";
 
 export const metadata: Metadata = {
   title: "PawFriends",
@@ -23,15 +24,17 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <QueryProvider>
-          <ToastProvider>
-            <ErrorBoundary>
-              <div className="app-shell">
-                {children}
-              </div>
-            </ErrorBoundary>
-          </ToastProvider>
-        </QueryProvider>
+        <LiffProvider>
+          <QueryProvider>
+            <ToastProvider>
+              <ErrorBoundary>
+                <div className="app-shell">
+                  {children}
+                </div>
+              </ErrorBoundary>
+            </ToastProvider>
+          </QueryProvider>
+        </LiffProvider>
       </body>
     </html>
   );
