@@ -12,6 +12,7 @@ import {
 } from "@/components/profile";
 import { useToast } from "@/components/Toast";
 import { MAX_PACK_SIZE } from "@/lib/constants";
+import NotFoundPage from "@/components/NotFoundPage";
 
 /* ── Page ── */
 export default function ProfilePage() {
@@ -22,6 +23,8 @@ export default function ProfilePage() {
 
   const { data, isLoading } = useProfile();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  console.log("Profile data:", data);
 
   const members = useMemo(() => {
     if (!data) return [];
@@ -49,7 +52,7 @@ export default function ProfilePage() {
         {
           value: isOwner
             ? (member as User).tier
-            : (member as Pet).ageGroup ?? "—",
+            : ((member as Pet).ageGroup ?? "—"),
           label: isOwner ? "Tier" : "Age Group",
         },
       ]
@@ -105,13 +108,20 @@ export default function ProfilePage() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto pb-24 z-0 mt-20">
-        {isLoading || !member ? (
+        {isLoading && (
           <div className="flex items-center justify-center h-64">
             <span className="material-symbols-outlined animate-spin text-[#c9a96e] text-4xl">
               progress_activity
             </span>
           </div>
-        ) : (
+        )}
+        {!member && (
+          <NotFoundPage
+            title="Profile not found"
+            description="This profile doesn't exist or has been removed."
+          />
+        )}
+        {member && (
           <div className="max-w-lg mx-auto">
             <div className="flex flex-col items-center px-4 py-6">
               <AvatarGroup
