@@ -24,12 +24,10 @@ export default function HomePage() {
   const [joinActivityId, setJoinActivityId] = useState<string | null>(null);
 
   const { data: allProfiles, isPending: isUserPending } = useProfile();
-  const { data: activities, isFetching: isActivitiesFetching } =
-    useActivities();
+  const { data: activities, isPending: isActivitiesFetching } = useActivities();
   const { mutate: createAttendee } = useCreateAttendees();
 
-  if (isUserPending || isActivitiesFetching)
-    return <SpinLoader title="Loading home" />;
+  if (isActivitiesFetching) return <SpinLoader title="Loading home" />;
 
   const NEARBY_KM = 20;
   function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
