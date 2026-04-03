@@ -10,7 +10,7 @@ export default function NotFoundPage({
   const router = useRouter();
 
   return (
-    <div className="flex flex-col flex-1 items-center justify-center min-h-dvh bg-[#f7f7f6] px-6 text-center gap-5">
+    <div className="flex flex-col flex-1 items-center justify-center mt-40 bg-[#f7f7f6] px-6 text-center gap-5">
       <div className="w-24 h-24 rounded-full bg-[rgba(226,207,183,0.3)] flex items-center justify-center">
         <span
           className="material-symbols-outlined text-[#e2cfb7]"

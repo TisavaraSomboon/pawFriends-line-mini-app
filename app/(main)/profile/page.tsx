@@ -82,7 +82,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="flex flex-col flex-1 min-w-0 min-h-dvh bg-[#f7f7f6]">
+    <div className="flex flex-col flex-1 min-w-0 bg-[#f7f7f6]">
       {/* Header */}
       <header className="fixed top-0 z-10 bg-[#f7f7f6]/80 backdrop-blur-md flex items-center justify-between px-4 py-4 border-b border-[rgba(226,207,183,0.2)] w-full">
         <h1 className="text-[18px] font-bold tracking-tight text-[#1e293b]">
@@ -107,21 +107,22 @@ export default function ProfilePage() {
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto pb-24 z-0 mt-20">
-        {isLoading && (
-          <div className="flex items-center justify-center h-64">
-            <span className="material-symbols-outlined animate-spin text-[#c9a96e] text-4xl">
-              progress_activity
-            </span>
-          </div>
-        )}
-        {!member && (
-          <NotFoundPage
-            title="Profile not found"
-            description="This profile doesn't exist or has been removed."
-          />
-        )}
-        {member && (
+
+      {isLoading && (
+        <div className="flex items-center justify-center h-64">
+          <span className="material-symbols-outlined animate-spin text-[#c9a96e] text-4xl">
+            progress_activity
+          </span>
+        </div>
+      )}
+      {!member && (
+        <NotFoundPage
+          title="Profile not found"
+          description="This profile doesn't exist or has been removed."
+        />
+      )}
+      {member && (
+        <div className="flex-1 overflow-y-auto pb-24 z-0 mt-20">
           <div className="max-w-lg mx-auto">
             <div className="flex flex-col items-center px-4 py-6">
               <AvatarGroup
@@ -164,8 +165,8 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
