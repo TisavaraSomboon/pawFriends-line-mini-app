@@ -68,7 +68,9 @@ export default function LiffProvider({
           <div className="w-12 h-12 rounded-full bg-[rgba(226,207,183,0.4)] flex items-center justify-center animate-pulse">
             <span className="text-2xl">🐾</span>
           </div>
-          <p className="text-[13px] font-semibold text-[#94a3b8]">Loading PawFriends…</p>
+          <p className="text-[13px] font-semibold text-[#94a3b8]">
+            Loading PawFriends…
+          </p>
         </div>
       </div>
     );

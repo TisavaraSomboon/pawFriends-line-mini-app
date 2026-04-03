@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { v4 as uuidv4 } from "uuid";
+import { useLiff } from "@/components/LiffProvider";
 
 
 async function uploadImage(image?: File | string) {
@@ -425,15 +426,27 @@ export function useUpdateAttendee() {
 // ─── Profile ───────────────────────────────────────────────────────────────────
 
 export function useProfile(userId?: string) {
+  const { profile: liffProfile, isReady } = useLiff();
+
+  // When no userId is passed, identify the current user via LIFF.
+  // Pass LINE profile data so the API can upsert on first visit.
+  const lineUserId = !userId ? liffProfile?.userId : undefined;
+  const queryParam = userId
+    ? `userId=${userId}`
+    : lineUserId
+      ? `lineUserId=${lineUserId}&displayName=${encodeURIComponent(liffProfile?.displayName ?? "")}&pictureUrl=${encodeURIComponent(liffProfile?.pictureUrl ?? "")}`
+      : null;
+
   return useQuery({
-    queryKey: ["userProfile", keys.profile(userId ?? "owner")],
+    queryKey: ["userProfile", queryParam],
     queryFn: async () => {
       const [user, pets] = await Promise.all([
-        apiFetch<User>(`/api/profile${userId ? `?userId=${userId}` : ""}`),
-        apiFetch<Pet[]>(`/api/pets?userId=${userId ?? "owner"}`),
+        apiFetch<User>(`/api/profile?${queryParam}`),
+        apiFetch<Pet[]>(`/api/pets?${queryParam}`),
       ]);
       return { user, pets };
     },
+    enabled: !!queryParam && (userId ? true : isReady),
   });
 }
 
@@ -640,7 +653,8 @@ export type Pet = {
 
 export type User = {
   _id: string;
-  email: string;
+  lineUserId?: string;
+  email?: string;
   name?: string;
   image?: string;
   locationName?: string;

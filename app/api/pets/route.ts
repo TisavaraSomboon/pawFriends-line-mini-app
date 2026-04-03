@@ -7,10 +7,11 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const petId = searchParams.get("petId");
   const userId = searchParams.get("userId");
+  const lineUserId = searchParams.get("lineUserId");
 
-  if (!petId && !userId) {
+  if (!petId && !userId && !lineUserId) {
     return NextResponse.json(
-      { error: "petId or userId required" },
+      { error: "petId, userId, or lineUserId required" },
       { status: 400 },
     );
   }
@@ -24,6 +25,17 @@ export async function GET(req: Request) {
       .findOne({ _id: new ObjectId(petId) }, { projection: { password: 0 } });
     if (!pet) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(pet);
+  }
+
+  // By lineUserId → resolve to MongoDB user first, then get their pets
+  if (lineUserId) {
+    const user = await db.collection("users").findOne({ lineUserId });
+    if (!user) return NextResponse.json([]);
+    const pets = await db
+      .collection("pets")
+      .find({ ownerId: user._id }, { projection: { password: 0 } })
+      .toArray();
+    return NextResponse.json(pets);
   }
 
   // By userId → all pets belonging to that user
