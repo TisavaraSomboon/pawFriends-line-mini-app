@@ -27,28 +27,23 @@ export async function GET(req: Request) {
   const displayName = searchParams.get("displayName") ?? "PawFriend";
   const pictureUrl = searchParams.get("pictureUrl") ?? undefined;
 
-  const existing = await db.collection("users").findOne({ lineUserId });
+  const user = await db.collection("users").findOneAndUpdate(
+    { lineUserId },
+    {
+      $set: { name: displayName, image: pictureUrl, updatedAt: new Date() },
+      $setOnInsert: {
+        lineUserId,
+        followers: 0,
+        following: 0,
+        rating: 0,
+        tier: Tier.Beginner,
+        createdAt: new Date(),
+      },
+    },
+    { upsert: true, returnDocument: "after" },
+  );
 
-  if (existing) {
-    return NextResponse.json(existing);
-  }
-
-  // First visit — create user from LINE profile
-  const now = new Date();
-  const result = await db.collection("users").insertOne({
-    lineUserId,
-    name: displayName,
-    image: pictureUrl,
-    followers: 0,
-    following: 0,
-    rating: 0,
-    tier: Tier.Beginner,
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  const newUser = await db.collection("users").findOne({ _id: result.insertedId });
-  return NextResponse.json(newUser, { status: 201 });
+  return NextResponse.json(user, { status: 200 });
 }
 
 export async function PATCH(req: Request) {
