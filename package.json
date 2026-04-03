@@ -11,6 +11,7 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@line/liff": "^2.24.0",
     "@anthropic-ai/sdk": "^0.79.0",
     "@aws-sdk/client-s3": "^3.1011.0",
     "@aws-sdk/s3-request-presigner": "^3.1010.0",
